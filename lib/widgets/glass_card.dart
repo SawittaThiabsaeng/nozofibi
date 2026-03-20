@@ -4,8 +4,7 @@ import 'dart:ui';
 class GlassCard extends StatelessWidget {
 
   const GlassCard({
-    super.key,
-    required this.child,
+    required this.child, super.key,
     this.padding,
     this.onTap,
     this.color,
@@ -25,7 +24,7 @@ class GlassCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(borderRadius),
         boxShadow: [
           BoxShadow(
-            color: isDarkMode ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.03),
+            color: isDarkMode ? Colors.black.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.03),
             blurRadius: 32,
             offset: const Offset(0, 12),
           )
@@ -40,10 +39,10 @@ class GlassCard extends StatelessWidget {
             child: Container(
               padding: padding ?? const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: color ?? (isDarkMode ? const Color(0xCC1A1C26) : Colors.white.withOpacity(0.7)),
+                color: color ?? (isDarkMode ? const Color(0xCC1A1C26) : Colors.white.withValues(alpha: 0.7)),
                 borderRadius: BorderRadius.circular(borderRadius),
                 border: Border.all(
-                  color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.white.withOpacity(0.6),
+                  color: isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.6),
                   width: 1.5,
                 ),
               ),

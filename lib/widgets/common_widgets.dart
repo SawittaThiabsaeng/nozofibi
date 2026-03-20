@@ -4,7 +4,7 @@ import '../theme/app_theme.dart';
 
 class GlassCard extends StatelessWidget {
 
-  const GlassCard({super.key, required this.child, this.padding, this.onTap, this.borderRadius = 32, this.color, this.height});
+  const GlassCard({required this.child, super.key, this.padding, this.onTap, this.borderRadius = 32, this.color, this.height});
   final Widget child;
   final EdgeInsetsGeometry? padding;
   final VoidCallback? onTap;
@@ -23,9 +23,9 @@ class GlassCard extends StatelessWidget {
             height: height,
             padding: padding ?? const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: color ?? Colors.white.withOpacity(0.4),
+              color: color ?? Colors.white.withValues(alpha: 0.4),
               borderRadius: BorderRadius.circular(borderRadius),
-              border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1.5),
             ),
             child: child,
           ),
@@ -35,19 +35,19 @@ class GlassCard extends StatelessWidget {
 }
 
 class GlowBlob extends StatelessWidget {
-  const GlowBlob({super.key, required this.color, required this.size});
+  const GlowBlob({required this.color, required this.size, super.key});
   final Color color;
   final double size;
   @override
   Widget build(BuildContext context) => Container(
     width: size,
     height: size,
-    decoration: BoxDecoration(color: color.withOpacity(0.12), shape: BoxShape.circle),
+    decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
   );
 }
 
 class StatCard extends StatelessWidget {
-  const StatCard({super.key, required this.icon, required this.label, required this.val, required this.color});
+  const StatCard({required this.icon, required this.label, required this.val, required this.color, super.key});
   final IconData icon;
   final String label;
   final String val;

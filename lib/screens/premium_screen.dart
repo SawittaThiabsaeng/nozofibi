@@ -3,12 +3,11 @@ import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 
 class PremiumView extends StatelessWidget {
-  final VoidCallback onBack;
   const PremiumView({super.key, required this.onBack});
+  final VoidCallback onBack;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       body: Container(
         width: double.infinity,
         decoration: const BoxDecoration(
@@ -33,7 +32,7 @@ class PremiumView extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.all(32),
                 child: GlassCard(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   child: Column(
                     children: [
                       const Text('\$4.99 / MONTH', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
@@ -55,5 +54,4 @@ class PremiumView extends StatelessWidget {
         ),
       ),
     );
-  }
 }

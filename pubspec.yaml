@@ -10,9 +10,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  firebase_core: ^3.15.2
   provider: ^6.0.0
   intl: ^0.19.0
-
+  flutter_svg: ^2.0.10
+  shared_preferences: ^2.2.2
+  image_picker: ^1.0.4
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -20,3 +23,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/images/dark.svg
+    - assets/images/light.svg
