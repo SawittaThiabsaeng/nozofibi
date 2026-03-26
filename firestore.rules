@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if accessing own user document
+    function isOwnUser(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // ============================================
+    // User Profile & Data
+    // ============================================
+    match /users/{userId} {
+      // Allow read/write only by the user themselves
+      allow read, write: if isAuthenticated() && isOwnUser(userId);
+      
+      // Subcollections for user data
+      match /focus_sessions_v2/{sessionId} {
+        allow read, write: if isAuthenticated() && isOwnUser(userId);
+      }
+      
+      match /consent/{consentId} {
+        // User can read/write only their own consent records.
+        allow read, write: if isAuthenticated() && isOwnUser(userId);
+      }
+    }
+    
+    // ============================================
+    // Audit Trail (Deleted Users)
+    // ============================================
+    // Only Cloud Functions can write (via adminSDK)
+    // No direct client access
+    match /deletedUsers/{userId} {
+      allow read, write: if false;
+    }
+    
+    // ============================================
+    // Data Retention & Cleanup Rules
+    // ============================================
+    // Ensure users can't read others' data
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

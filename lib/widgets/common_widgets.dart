@@ -13,7 +13,11 @@ class GlassCard extends StatelessWidget {
   final double? height;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) {
+    final isDark =
+        Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
       onTap: onTap,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
@@ -23,15 +27,24 @@ class GlassCard extends StatelessWidget {
             height: height,
             padding: padding ?? const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: color ?? Colors.white.withValues(alpha: 0.4),
+              color: color ??
+                  (isDark
+                      ? const Color(0xCC11182A)
+                      : Colors.white.withValues(alpha: 0.4)),
               borderRadius: BorderRadius.circular(borderRadius),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1.5),
+              border: Border.all(
+                color: isDark
+                    ? const Color(0xFF1E2A45).withValues(alpha: 0.85)
+                    : Colors.white.withValues(alpha: 0.5),
+                width: 1.5,
+              ),
             ),
             child: child,
           ),
         ),
       ),
     );
+  }
 }
 
 class GlowBlob extends StatelessWidget {

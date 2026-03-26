@@ -1,254 +1,328 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../providers/study_session_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import '../models/task.dart';
-import '../models/focus_session.dart';
-import '../data/focus_storage.dart';
 import 'dart:ui';
+import '../l10n/app_strings.dart';
 
 class AnalyticsView extends StatefulWidget {
   const AnalyticsView({
     super.key,
     required this.tasks,
+    required this.refreshToken,
   });
 
   final List<ScheduleTask> tasks;
+  final int refreshToken;
 
   @override
   State<AnalyticsView> createState() => _AnalyticsViewState();
 }
 
 class _AnalyticsViewState extends State<AnalyticsView> {
-  List<FocusSession> sessions = [];
+  static const int _sessionsPerPage = 5;
+  int _currentPage = 0;
 
   @override
-void didChangeDependencies() {
-  super.didChangeDependencies();
-  loadSessions();
-}
-
-  Future<void> loadSessions() async {
-    final data = await FocusStorage.loadSessions();
-    setState(() {
-      sessions = data;
-    });
+  void didUpdateWidget(covariant AnalyticsView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refreshToken != widget.refreshToken) {
+      // Trigger refresh from provider
+      if (!mounted) return;
+      context.read<StudySessionProvider>().refresh();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final startOfWeek =
-        now.subtract(Duration(days: now.weekday - 1));
+    return Consumer<StudySessionProvider>(
+      builder: (context, sessionProvider, _) {
+        final s = AppStrings.of(context);
+        // Use precomputed weekly stats from provider
+        final weeklyStats = sessionProvider.weeklyStats;
+        final allSessions = [...sessionProvider.sessions]
+          ..sort((a, b) => b.date.compareTo(a.date));
+        
+        // Pagination for recent sessions
+        final paginatedSessions = allSessions
+            .skip(_currentPage * _sessionsPerPage)
+            .take(_sessionsPerPage)
+            .toList();
+        final hasMoreSessions = allSessions.length > (_currentPage + 1) * _sessionsPerPage;
 
-    /// 🔹 คำนวณ 7 วัน (Mon - Sun)
-    List<double> weeklyHours = List.generate(7, (index) {
-      final day = startOfWeek.add(Duration(days: index));
+        // Format weekly stats
+        final days = s.isThai
+          ? ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา']
+          : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final localeTag = Localizations.localeOf(context).toLanguageTag();
+        final dateFormat = DateFormat('dd MMM yyyy, HH:mm', localeTag);
 
-      /// นาทีจาก ScheduleTask
-      final taskMinutes = widget.tasks
-          .where((t) =>
-              t.completed &&
-              DateUtils.isSameDay(t.date, day))
-          .fold<int>(0, (sum, t) => sum + t.focusMinutes);
-
-      /// นาทีจาก FocusSession (โหลดจาก Storage)
-      final sessionMinutes = sessions
-          .where((s) =>
-              DateUtils.isSameDay(s.date, day))
-          .fold<int>(0, (sum, s) => sum + s.minutes);
-
-      return (taskMinutes + sessionMinutes) / 60;
-    });
-
-    final days = [
-      'Mon',
-      'Tue',
-      'Wed',
-      'Thu',
-      'Fri',
-      'Sat',
-      'Sun'
-    ];
-
-    final double total =
-        weeklyHours.fold(0, (a, b) => a + b);
-
-    final double average =
-        total == 0 ? 0 : total / 7;
-
-    final double maxValue =
-        weeklyHours.isEmpty
-            ? 0
-            : weeklyHours.reduce(
-                (a, b) => a > b ? a : b);
-
-    final int bestIndex =
-        weeklyHours.indexWhere(
-      (e) => e == maxValue,
-    );
-final isDark = Theme.of(context).brightness == Brightness.dark;
-
-return Scaffold(
-  backgroundColor: isDark ? null : const Color(0xFFF6F4FA),
-  body: Container(
-    decoration: isDark ? AppTheme.darkGradient : null,
-    child: Stack(
-      children: [
-
-        /// 🔵 มุมล่างซ้าย
-        Positioned(
-          bottom: -120,
-          left: -120,
-          child: ImageFiltered(
-            imageFilter: ImageFilter.blur(
-                sigmaX: 140, sigmaY: 140),
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.blue.withOpacity(0.6),
-              ),
-            ),
-          ),
-        ),
-
-        /// 🟣 มุมบนขวา
-        Positioned(
-          top: -150,
-          right: -150,
-          child: ImageFiltered(
-            imageFilter: ImageFilter.blur(
-                sigmaX: 140, sigmaY: 140),
-            child: Container(
-              width: 350,
-              height: 350,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF8B5CF6)
-                    .withOpacity(0.6),
-              ),
-            ),
-          ),
-        ),
-
-        /// 📊 เนื้อหา
-        SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              const SizedBox(height: 20),
-
-              Text(
-                'Insights',
-                style: AppTheme.h1.copyWith(color: Colors.white),
-              ),
-
-              const SizedBox(height: 24),
-
-              // 👇 ของเดิมวางต่อได้เลย
-
-          /// 🟣 WEEKLY SUMMARY
-          GlassCard(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'WEEKLY SUMMARY',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textMuted,
+        return Scaffold(
+          backgroundColor: isDark ? null : const Color(0xFFF6F4FA),
+          body: Container(
+            decoration: isDark ? AppTheme.darkGradient : null,
+            child: Stack(
+              children: [
+                /// 🔵 Bottom left blob
+                Positioned(
+                  bottom: -120,
+                  left: -120,
+                  child: ImageFiltered(
+                    imageFilter: ImageFilter.blur(sigmaX: 140, sigmaY: 140),
+                    child: Container(
+                      width: 300,
+                      height: 300,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.blue.withOpacity(0.6),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Total Focus This Week: ${total.toStringAsFixed(1)}h',
-                    style: AppTheme.h2,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Average Per Day: ${average.toStringAsFixed(1)}h',
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    total == 0
-                        ? 'Best Day: -'
-                        : 'Best Day: ${days[bestIndex]}',
-                  ),
-                ],
-              ),
-            ),
-          ),
+                ),
 
-          const SizedBox(height: 32),
+                /// 🟣 Top right blob
+                Positioned(
+                  top: -150,
+                  right: -150,
+                  child: ImageFiltered(
+                    imageFilter: ImageFilter.blur(sigmaX: 140, sigmaY: 140),
+                    child: Container(
+                      width: 350,
+                      height: 350,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFF8B5CF6).withOpacity(0.6),
+                      ),
+                    ),
+                  ),
+                ),
 
-          /// 🟣 WEEKLY BAR CHART
-          GlassCard(
-            height: 260,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  const Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.spaceBetween,
+                /// 📊 Content
+                SafeArea(
+                  child: ListView(
+                    padding: const EdgeInsets.all(24),
                     children: [
+                      const SizedBox(height: 20),
                       Text(
-                        'WEEKLY FOCUS',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.textMuted,
+                        s.insights,
+                        style: AppTheme.h1.copyWith(
+                          color: isDark ? Colors.white : AppTheme.textDark,
                         ),
                       ),
+                      const SizedBox(height: 24),
+
+                      /// 🟣 WEEKLY SUMMARY
+                      GlassCard(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                s.weeklySummary,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.textMuted,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                s.totalFocusThisWeek(_formatDuration((weeklyStats?.totalSeconds ?? 0))),
+                                style: AppTheme.h2,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                s.averagePerDay(_formatDuration((weeklyStats?.totalSeconds ?? 0) ~/ 7)),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                (weeklyStats?.bestDay ?? -1) < 0
+                                    ? s.bestDay('-')
+                                    : s.bestDay(days[weeklyStats!.bestDay]),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      /// 🟣 WEEKLY BAR CHART
+                      GlassCard(
+                        height: 260,
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    s.weeklyFocus,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.textMuted,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              if (weeklyStats != null)
+                                Expanded(
+                                  child: LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      const labelHeight = 16.0;
+                                      const labelGap = 8.0;
+                                      final maxBarHeight = (constraints.maxHeight - labelHeight - labelGap)
+                                          .clamp(0.0, 180.0);
+                                      final maxDailySeconds = weeklyStats.dailySeconds.reduce(
+                                        (a, b) => a > b ? a : b,
+                                      );
+
+                                      return Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        children: List.generate(7, (index) {
+                                          final dailySeconds = weeklyStats.dailySeconds[index];
+                                          final normalizedHeight = maxDailySeconds == 0
+                                              ? 0.0
+                                              : (dailySeconds / maxDailySeconds) * maxBarHeight;
+
+                                          return Column(
+                                            mainAxisAlignment: MainAxisAlignment.end,
+                                            children: [
+                                              _bar(
+                                                normalizedHeight,
+                                                active: index == weeklyStats.bestDay && weeklyStats.totalSeconds > 0,
+                                              ),
+                                              const SizedBox(height: labelGap),
+                                              Text(days[index], style: const TextStyle(fontSize: 11)),
+                                            ],
+                                          );
+                                        }),
+                                      );
+                                    },
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      /// 🟣 RECENT SESSIONS
+                      GlassCard(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                s.recentSessions,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.textMuted,
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              if (paginatedSessions.isEmpty)
+                                Text(
+                                  s.noSavedSessions,
+                                  style: TextStyle(
+                                    color: isDark ? Colors.white70 : AppTheme.textMuted,
+                                  ),
+                                )
+                              else
+                                ...paginatedSessions.map((session) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                session.title,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(fontWeight: FontWeight.w700),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                dateFormat.format(session.date),
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: AppTheme.textMuted,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          _formatDuration(session.totalSeconds),
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: isDark ? Colors.white : AppTheme.textDark,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                              
+                              // Pagination controls
+                              if (allSessions.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 12),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      if (_currentPage > 0)
+                                        TextButton(
+                                          onPressed: () => setState(() => _currentPage--),
+                                          child: Text(s.previous),
+                                        )
+                                      else
+                                        const SizedBox(width: 80),
+                                      Text(
+                                        s.page(_currentPage + 1),
+                                        style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                                      ),
+                                      if (hasMoreSessions)
+                                        TextButton(
+                                          onPressed: () => setState(() => _currentPage++),
+                                          child: Text(s.next),
+                                        )
+                                      else
+                                        const SizedBox(width: 80),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 40),
                     ],
                   ),
-                  const Spacer(),
-                  Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.spaceEvenly,
-                    crossAxisAlignment:
-                        CrossAxisAlignment.end,
-                    children:
-                        List.generate(7, (index) {
-                      return Column(
-                        mainAxisAlignment:
-                            MainAxisAlignment.end,
-                        children: [
-                          _bar(
-                            weeklyHours[index] * 25,
-                            active:
-                                index == bestIndex &&
-                                    total > 0,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            days[index],
-                            style:
-                                const TextStyle(
-                                    fontSize: 11),
-                          ),
-                        ],
-                      );
-                    }),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-
-          const SizedBox(height: 40),
-          ],
-        ),
-      ),
-    ],
-  ),
-  ),
-);
+        );
+      },
+    );
   }
 
   static Widget _bar(double height,
@@ -257,7 +331,7 @@ return Scaffold(
       duration:
           const Duration(milliseconds: 400),
       width: 22,
-      height: height.clamp(4, 180),
+      height: height.clamp(0, 180),
       decoration: BoxDecoration(
         color: active
             ? AppTheme.primary
@@ -267,5 +341,12 @@ return Scaffold(
             BorderRadius.circular(8),
       ),
     );
+  }
+
+  static String _formatDuration(int totalSeconds) {
+    final h = totalSeconds ~/ 3600;
+    final m = (totalSeconds % 3600) ~/ 60;
+    final s = totalSeconds % 60;
+    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 }

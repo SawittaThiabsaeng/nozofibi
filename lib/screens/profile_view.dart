@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/soft_background.dart';
+import '../data/profile_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
+import 'dart:typed_data';
+import '../l10n/app_strings.dart';
+import '../models/focus_session.dart';
+import '../providers/study_session_provider.dart';
 
-class ProfileView extends StatelessWidget {
+class ProfileView extends StatefulWidget {
   const ProfileView({
     super.key,
     required this.userName,
@@ -25,19 +32,55 @@ class ProfileView extends StatelessWidget {
   final Function(bool) onToggleDarkMode;
 
   @override
+  State<ProfileView> createState() => _ProfileViewState();
+}
+
+class _ProfileViewState extends State<ProfileView> {
+  Uint8List? _savedProfileImage;
+  bool _loadingImage = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedProfileImage();
+  }
+
+  Future<void> _loadSavedProfileImage() async {
+    try {
+      final savedImage = await ProfileStorage.loadProfileImage();
+      if (!mounted) return;
+      setState(() {
+        _savedProfileImage = savedImage;
+        _loadingImage = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading saved profile image: $e');
+      if (!mounted) return;
+      setState(() {
+        _loadingImage = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     final isDark =
         Theme.of(context).brightness == Brightness.dark;
+    final sessions = context.select<StudySessionProvider, List<FocusSession>>(
+      (provider) => provider.sessions,
+    );
+    final streakDays = _calculateStreakDays(sessions);
 
     final textColor =
         isDark ? Colors.white : AppTheme.textDark;
 
-    final mutedColor =
-        isDark ? Colors.white70 : AppTheme.textMuted;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 60, 24, 150),
-      children: [
+
+    return SoftBackground(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(24, 60, 24, 150),
+        children: [
         /// PROFILE HEADER
         Center(
           child: Column(
@@ -57,33 +100,46 @@ class ProfileView extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
-                      color: AppTheme.primary,
-                      shape: BoxShape.circle,
+                  if (streakDays > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                      decoration: const BoxDecoration(
+                        color: AppTheme.primary,
+                        borderRadius: BorderRadius.all(Radius.circular(20)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.bolt_rounded,
+                            color: Colors.white,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$streakDays',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.bolt,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                  ),
                 ],
               ),
               const SizedBox(height: 16),
               Text(
-                userName,
+                widget.userName,
                 style: AppTheme.h1.copyWith(color: textColor),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
               Text(
-                'NOZOFIBI MASTER • LEVEL 24',
-                style: TextStyle(
-                  color: mutedColor,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
-                  fontSize: 10,
+                s.currentStreak(streakDays),
+                style: AppTheme.caption.copyWith(
+                  fontSize: 12,
+                  color: isDark ? Colors.white70 : AppTheme.textMuted,
                 ),
               ),
             ],
@@ -93,7 +149,7 @@ class ProfileView extends StatelessWidget {
         const SizedBox(height: 40),
 
         Text(
-          "System Settings",
+          s.systemSettings,
           style: AppTheme.h1.copyWith(
               fontSize: 18, color: textColor),
         ),
@@ -105,36 +161,73 @@ class ProfileView extends StatelessWidget {
             children: [
               _tile(
                 Icons.edit_outlined,
-                "Edit Profile",
+                s.editProfile,
                 textColor,
-                tap: onEditProfile,
+                tap: widget.onEditProfile,
               ),
               _tile(
                 Icons.settings_outlined,
-                "Account Settings",
+                s.accountSettings,
                 textColor,
-                tap: onGoSettings,
+                tap: widget.onGoSettings,
               ),
               _darkModeTile(context, textColor),
               _tile(
                 Icons.logout,
-                "Sign Out",
+                s.signOut,
                 Colors.redAccent,
                 isLast: true,
-                tap: onLogout,
+                tap: widget.onLogout,
               ),
             ],
           ),
         ),
-      ],
+        ],
+      ),
     );
   }
 
   /// ✅ Profile Image Fix (Full Circle + Web + Mobile)
+  /// Build profile image from saved storage or current profileImage
+  /// Priority: Saved image > Current profileImage > Default avatar
   Widget _buildProfileImage() {
-    if (profileImage == null) {
-      return Image.network(
-        'https://api.dicebear.com/7.x/avataaars/svg?seed=User',
+    // Show saved image from secure storage (persists across restarts)
+    if (!_loadingImage && _savedProfileImage != null) {
+      return Image.memory(
+        _savedProfileImage!,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+      );
+    }
+
+    // Show loading indicator while fetching saved image
+    if (_loadingImage) {
+      return const Center(
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+
+    // Fallback to current profileImage if available
+    if (widget.profileImage != null) {
+      if (kIsWeb) {
+        return Image.network(
+          widget.profileImage!.path,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          errorBuilder: (context, error, stackTrace) {
+            return const Icon(
+              Icons.person,
+              size: 60,
+              color: Colors.grey,
+            );
+          },
+        );
+      }
+
+      return Image.file(
+        File(widget.profileImage!.path),
         fit: BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
@@ -148,27 +241,19 @@ class ProfileView extends StatelessWidget {
       );
     }
 
-    if (kIsWeb) {
-      return Image.network(
-        profileImage!.path,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        errorBuilder: (context, error, stackTrace) {
-          return const Icon(
-            Icons.person,
-            size: 60,
-            color: Colors.grey,
-          );
-        },
-      );
-    }
-
-    return Image.file(
-      File(profileImage!.path),
+    // Default avatar if no image exists
+    return Image.network(
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=User',
       fit: BoxFit.cover,
       width: double.infinity,
       height: double.infinity,
+      errorBuilder: (context, error, stackTrace) {
+        return const Icon(
+          Icons.person,
+          size: 60,
+          color: Colors.grey,
+        );
+      },
     );
   }
 
@@ -190,14 +275,14 @@ class ProfileView extends StatelessWidget {
         ),
       ),
       title: Text(
-        "Dark Mode",
+        AppStrings.of(context).darkMode,
         style: TextStyle(
             fontWeight: FontWeight.bold,
             color: textColor),
       ),
       trailing: Switch(
         value: isDark,
-        onChanged: onToggleDarkMode,
+        onChanged: widget.onToggleDarkMode,
       ),
     );
   }
@@ -229,4 +314,32 @@ class ProfileView extends StatelessWidget {
       trailing: const Icon(Icons.chevron_right, size: 18),
     );
   }
+
+  int _calculateStreakDays(List<FocusSession> sessions) {
+    if (sessions.isEmpty) {
+      return 0;
+    }
+
+    final completedDays = <DateTime>{
+      for (final session in sessions)
+        DateTime(session.date.year, session.date.month, session.date.day),
+    };
+
+    var cursor = DateTime.now();
+    cursor = DateTime(cursor.year, cursor.month, cursor.day);
+
+    // Active streak only: if user has not read today, streak resets immediately.
+    if (!completedDays.contains(cursor)) {
+      return 0;
+    }
+
+    var streak = 0;
+    while (completedDays.contains(cursor)) {
+      streak++;
+      cursor = cursor.subtract(const Duration(days: 1));
+    }
+
+    return streak;
+  }
 }
+

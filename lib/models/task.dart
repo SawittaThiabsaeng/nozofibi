@@ -1,5 +1,18 @@
 enum TaskType { study, breakTime, exercise, rest }
 
+TaskType _taskTypeFromName(String? name) {
+  if (name == null) {
+    return TaskType.study;
+  }
+
+  for (final value in TaskType.values) {
+    if (value.name == name) {
+      return value;
+    }
+  }
+  return TaskType.study;
+}
+
 class ScheduleTask {
   ScheduleTask({
     required this.id,
@@ -39,5 +52,25 @@ class ScheduleTask {
         type: type ?? this.type,
         completed: completed ?? this.completed,
         focusMinutes: focusMinutes ?? this.focusMinutes,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'date': date.toIso8601String(),
+        'time': time,
+        'title': title,
+        'type': type.name,
+        'completed': completed,
+        'focusMinutes': focusMinutes,
+      };
+
+  factory ScheduleTask.fromJson(Map<String, dynamic> json) => ScheduleTask(
+        id: (json['id'] ?? '').toString(),
+        date: DateTime.tryParse((json['date'] ?? '').toString()) ?? DateTime.now(),
+        time: (json['time'] ?? '').toString(),
+        title: (json['title'] ?? '').toString(),
+        type: _taskTypeFromName(json['type']?.toString()),
+        completed: json['completed'] == true,
+        focusMinutes: (json['focusMinutes'] as num?)?.toInt() ?? 0,
       );
 }

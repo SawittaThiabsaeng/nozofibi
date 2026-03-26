@@ -30,6 +30,16 @@ flutter_export_environment.sh
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/key.properties
+/android/keystore/
+/android/app/google-services.json
+/android/local.properties
+
+#  Sensitive credentials
+# Firebase configuration - managed via CI/CD secrets
+/android/app/google-services.json
+/google-services.json
+*.plist
 
 # iOS/macOS
 **/ios/**/*.mode1v3

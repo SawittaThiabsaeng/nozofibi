@@ -19,12 +19,19 @@ class GlassCard extends StatelessWidget {
   final bool isDarkMode;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    final isDark =
+      Theme.of(context).brightness == Brightness.dark ||
+        isDarkMode;
+
+    return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(borderRadius),
         boxShadow: [
           BoxShadow(
-            color: isDarkMode ? Colors.black.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.03),
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.45)
+                : Colors.black.withValues(alpha: 0.03),
             blurRadius: 32,
             offset: const Offset(0, 12),
           )
@@ -39,10 +46,15 @@ class GlassCard extends StatelessWidget {
             child: Container(
               padding: padding ?? const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: color ?? (isDarkMode ? const Color(0xCC1A1C26) : Colors.white.withValues(alpha: 0.7)),
+                color: color ??
+                    (isDark
+                        ? const Color(0xCC11182A)
+                        : Colors.white.withValues(alpha: 0.7)),
                 borderRadius: BorderRadius.circular(borderRadius),
                 border: Border.all(
-                  color: isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.6),
+                  color: isDark
+                      ? const Color(0xFF1E2A45).withValues(alpha: 0.85)
+                      : Colors.white.withValues(alpha: 0.6),
                   width: 1.5,
                 ),
               ),
@@ -52,4 +64,5 @@ class GlassCard extends StatelessWidget {
         ),
       ),
     );
+  }
 }

@@ -8,8 +8,6 @@ class SoftBackground extends StatelessWidget {
 
 @override
 Widget build(BuildContext context) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-
   return Stack(
     children: [
 
@@ -48,13 +46,13 @@ Widget build(BuildContext context) {
     required double size,
   }) {
     return ImageFiltered(
-      imageFilter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+      imageFilter: ImageFilter.blur(sigmaX: 72, sigmaY: 72),
       child: Container(
         width: size,
         height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: color.withOpacity(0.4),
+          color: color.withOpacity(0.32),
         ),
       ),
     );

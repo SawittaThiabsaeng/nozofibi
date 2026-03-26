@@ -55,8 +55,8 @@ class AppTheme {
 
   static TextStyle get caption => const TextStyle(
         fontSize: 10,
-        fontWeight: FontWeight.w900,
-        letterSpacing: 2,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.2,
         color: textMuted,
       );
 

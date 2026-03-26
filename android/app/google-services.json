@@ -9,10 +9,23 @@
       "client_info": {
         "mobilesdk_app_id": "1:170288600357:android:ba2b7b82b635847f3ff6cc",
         "android_client_info": {
-          "package_name": "com.example.nozofibi"
+          "package_name": "com.nozofibi.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "170288600357-pp05fn3l4l46rpd50r0qpd9uva44unv3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nozofibi.app",
+            "certificate_hash": "0260421e61dff6e9971fe76c90d99181ca3e0f47"
+          }
+        },
+        {
+          "client_id": "170288600357-p31o9o6orqp2pl3fu9ob5sr2asnuni4h.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAvGufikdNErmjD9a-F-JhwCOwSO6Ggn2k"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "170288600357-p31o9o6orqp2pl3fu9ob5sr2asnuni4h.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
