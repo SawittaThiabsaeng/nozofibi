@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Nozofibi logo">
+  <defs>
+    <linearGradient id="nGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#70A1FF" />
+      <stop offset="50%" stop-color="#A29BFE" />
+      <stop offset="100%" stop-color="#FF9FF3" />
+    </linearGradient>
+    <filter id="nGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3" />
+    </filter>
+    <filter id="starGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3.5" />
+    </filter>
+  </defs>
+
+  <path
+    d="M25 75 L25 45 C25 20 45 20 50 45 L50 55 C55 80 75 80 75 55 L75 25"
+    fill="none"
+    stroke="#A29BFE"
+    stroke-width="18"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-opacity="0.2"
+    filter="url(#nGlow)"
+  />
+
+  <path
+    d="M25 75 L25 45 C25 20 45 20 50 45 L50 55 C55 80 75 80 75 55 L75 25"
+    fill="none"
+    stroke="url(#nGrad)"
+    stroke-width="18"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <circle cx="85" cy="15" r="15" fill="#FDCB6E" fill-opacity="0.3" filter="url(#starGlow)" />
+  <path d="M85 5 L88 12 L95 15 L88 18 L85 25 L82 18 L75 15 L82 12 Z" fill="#FDCB6E" />
+</svg>

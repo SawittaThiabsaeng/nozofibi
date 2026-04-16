@@ -1,15 +1,11 @@
 import 'package:flutter/foundation.dart';
-import '../models/focus_session.dart';
+
 import '../data/focus_storage.dart';
+import '../models/focus_session.dart';
+import '../services/app_logger.dart';
 
 /// Model for weekly statistics (extracted from calc logic)
 class WeeklyStats {
-  final List<int> dailySeconds;
-  final double totalHours;
-  final double averageHours;
-  final int bestDay; // day of week (0-6), -1 if no data
-  final DateTime weekStart;
-
   WeeklyStats({
     required this.dailySeconds,
     required this.totalHours,
@@ -17,12 +13,17 @@ class WeeklyStats {
     required this.bestDay,
     required this.weekStart,
   });
+  final List<int> dailySeconds;
+  final double totalHours;
+  final double averageHours;
+  final int bestDay; // day of week (0-6), -1 if no data
+  final DateTime weekStart;
 
   int get totalSeconds => dailySeconds.fold(0, (a, b) => a + b);
 }
 
 /// Manages focus sessions and weekly statistics.
-/// 
+///
 /// Consolidated from AnalyticsView to enable:
 /// - Testable stats calculations
 /// - Reactive updates to weekly data
@@ -55,7 +56,7 @@ class StudySessionProvider extends ChangeNotifier {
       _recalculateWeeklyStats();
       _loaded = true;
     } catch (e) {
-      debugPrint('Error loading sessions: $e');
+      AppLogger.error('Error loading sessions', error: e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -70,7 +71,7 @@ class StudySessionProvider extends ChangeNotifier {
       _recalculateWeeklyStats();
       notifyListeners();
     } catch (e) {
-      debugPrint('Error adding session: $e');
+      AppLogger.error('Error adding session', error: e);
       rethrow;
     }
   }
@@ -85,7 +86,8 @@ class StudySessionProvider extends ChangeNotifier {
   WeeklyStats _calculateWeeklyStats() {
     final now = DateTime.now();
     final weekStart = now.subtract(Duration(days: now.weekday - 1));
-    final startOfWeek = DateTime(weekStart.year, weekStart.month, weekStart.day);
+    final startOfWeek =
+        DateTime(weekStart.year, weekStart.month, weekStart.day);
 
     // Calculate seconds per day for the week
     final weeklySeconds = List.generate(7, (index) {
@@ -93,12 +95,10 @@ class StudySessionProvider extends ChangeNotifier {
       final dayStart = DateTime(day.year, day.month, day.day);
 
       // Seconds from focus sessions for this day
-      final sessionSeconds = _sessions
-          .where((s) {
-            final sessionDate = DateTime(s.date.year, s.date.month, s.date.day);
-            return sessionDate.isAtSameMomentAs(dayStart);
-          })
-          .fold<int>(0, (sum, s) => sum + s.totalSeconds);
+      final sessionSeconds = _sessions.where((s) {
+        final sessionDate = DateTime(s.date.year, s.date.month, s.date.day);
+        return sessionDate.isAtSameMomentAs(dayStart);
+      }).fold<int>(0, (sum, s) => sum + s.totalSeconds);
 
       return sessionSeconds;
     });
@@ -106,10 +106,11 @@ class StudySessionProvider extends ChangeNotifier {
     // Calculate aggregate stats
     final totalSeconds = weeklySeconds.fold<int>(0, (a, b) => a + b);
     final totalHours = (totalSeconds / 3600).toDouble();
-    final averageHours = totalSeconds == 0 ? 0.0 : ((totalSeconds / 7) / 3600).toDouble();
+    final averageHours =
+        totalSeconds == 0 ? 0.0 : ((totalSeconds / 7) / 3600).toDouble();
 
     // Find best day (most focus time)
-    int bestDay = -1;
+    var bestDay = -1;
     if (weeklySeconds.isNotEmpty) {
       final maxSeconds = weeklySeconds.reduce((a, b) => a > b ? a : b);
       if (maxSeconds > 0) {
@@ -151,5 +152,3 @@ class StudySessionProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
-
-

@@ -1,8 +1,11 @@
 import 'dart:io';
 
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nozofibi/data/account_service.dart';
 import 'package:nozofibi/data/app_local_db.dart';
 import 'package:nozofibi/data/privacy_storage.dart';
 import 'package:nozofibi/data/task_storage.dart';
@@ -11,6 +14,8 @@ import 'package:nozofibi/models/task.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late Directory testHiveDir;
+  late FakeFirebaseFirestore firestore;
+  late MockFirebaseAuth auth;
 
   setUpAll(() async {
     testHiveDir = await Directory.systemTemp.createTemp('nozofibi_test_hive_');
@@ -20,6 +25,18 @@ void main() {
   });
 
   setUp(() async {
+    firestore = FakeFirebaseFirestore();
+    auth = MockFirebaseAuth(
+      mockUser: MockUser(
+        uid: 'production-readiness-user',
+        email: 'production@example.com',
+      ),
+      signedIn: true,
+    );
+    AccountService.configureForTesting(
+      auth: auth,
+      firestore: firestore,
+    );
     try {
       await TaskStorage.clear();
       await PrivacyStorage.clearPrivacyData();
@@ -28,11 +45,13 @@ void main() {
     }
   });
 
+  tearDown(AccountService.resetForTesting);
+
   tearDownAll(() async {
     try {
       await AppLocalDb.resetForTesting();
-      if (await testHiveDir.exists()) {
-        await testHiveDir.delete(recursive: true);
+      if (testHiveDir.existsSync()) {
+        testHiveDir.deleteSync(recursive: true);
       }
     } catch (e) {
       debugPrint('tearDownAll error: $e');
@@ -53,14 +72,15 @@ void main() {
     test('clearPrivacyData removes consent completely', () async {
       await PrivacyStorage.saveConsentAcceptedNow();
       expect(PrivacyStorage.hasConsent(), isTrue);
-      
+
       await PrivacyStorage.clearPrivacyData();
       expect(PrivacyStorage.hasConsent(), isFalse);
     });
   });
 
   group('User Data Deletion Flow', () {
-    test('delete tasks removes all tasks and preserves consent state', () async {
+    test('delete tasks removes all tasks and preserves consent state',
+        () async {
       final now = DateTime.now();
       await TaskStorage.saveTasks([
         ScheduleTask(
@@ -110,7 +130,7 @@ void main() {
     test('tasks are encrypted in Hive storage', () async {
       final now = DateTime.now();
       const title = 'Confidential Task';
-      
+
       await TaskStorage.saveTasks([
         ScheduleTask(
           id: 'confidential-1',
@@ -131,14 +151,14 @@ void main() {
 
     test('consent data is encrypted and survives storage cycle', () async {
       await PrivacyStorage.saveConsentAcceptedNow();
-      
+
       // Consent flag should persist across operations
       expect(PrivacyStorage.hasConsent(), isTrue);
-      
+
       // Even after clearing and saving again
       await PrivacyStorage.clearPrivacyData();
       expect(PrivacyStorage.hasConsent(), isFalse);
-      
+
       await PrivacyStorage.saveConsentAcceptedNow();
       expect(PrivacyStorage.hasConsent(), isTrue);
     });

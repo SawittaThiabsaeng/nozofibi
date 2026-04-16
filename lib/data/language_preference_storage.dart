@@ -1,5 +1,6 @@
 import 'package:hive/hive.dart';
-import 'package:flutter/foundation.dart';
+
+import '../services/app_logger.dart';
 import 'app_local_db.dart';
 
 /// Storage for user language preference (en/th)
@@ -7,15 +8,19 @@ class LanguagePreferenceStorage {
   static const String _languageCodeKey = 'user_language_code';
   static const String _defaultLanguageCode = 'en';
 
+  static bool _isMissingBoxError(Object error) =>
+      error is HiveError && error.toString().contains('Box not found');
+
   /// Save user's language preference
   static Future<void> setLanguage(String languageCode) async {
     try {
       final box = Hive.box<String>(AppLocalDb.privacyBox);
       await box.put(_languageCodeKey, languageCode.toLowerCase());
-      debugPrint('Language preference saved: $languageCode');
+      AppLogger.info('Language preference saved');
     } catch (e) {
-      // Hive not initialized (e.g., in tests), silently fail
-      debugPrint('Warning: Could not save language preference: $e');
+      if (!_isMissingBoxError(e)) {
+        AppLogger.warn('Could not save language preference: $e');
+      }
     }
   }
 
@@ -26,8 +31,9 @@ class LanguagePreferenceStorage {
       final code = box.get(_languageCodeKey);
       return code ?? _defaultLanguageCode;
     } catch (e) {
-      // Hive not initialized (e.g., in tests), return default
-      debugPrint('Warning: Could not load language preference: $e');
+      if (!_isMissingBoxError(e)) {
+        AppLogger.warn('Could not load language preference: $e');
+      }
       return _defaultLanguageCode;
     }
   }
@@ -36,7 +42,7 @@ class LanguagePreferenceStorage {
   static Future<void> clearLanguagePreference() async {
     final box = Hive.box<String>(AppLocalDb.privacyBox);
     await box.delete(_languageCodeKey);
-    debugPrint('Language preference cleared');
+    AppLogger.info('Language preference cleared');
   }
 
   /// Check if user has set a language preference

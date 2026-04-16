@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 
 class RollerDurationPicker extends StatefulWidget {
-  final int initialTotalSeconds;
-  final Function(int) onDurationSelected;
 
   const RollerDurationPicker({
-    super.key,
-    required this.initialTotalSeconds,
-    required this.onDurationSelected,
+    required this.initialTotalSeconds, required this.onDurationSelected, super.key,
   });
+  final int initialTotalSeconds;
+  final Function(int) onDurationSelected;
 
   @override
   State<RollerDurationPicker> createState() => _RollerDurationPickerState();
@@ -341,9 +339,9 @@ class _RollerDurationPickerState extends State<RollerDurationPicker> {
 Future<int?> showRollerDurationPicker({
   required BuildContext context,
   required int initialTotalSeconds,
-}) {
-  return showModalBottomSheet<int>(
+}) => showModalBottomSheet<int>(
     context: context,
+    backgroundColor: Theme.of(context).colorScheme.surface,
     builder: (context) => RollerDurationPicker(
       initialTotalSeconds: initialTotalSeconds,
       onDurationSelected: (_) {},
@@ -352,4 +350,3 @@ Future<int?> showRollerDurationPicker({
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
   );
-}

@@ -1,12 +1,15 @@
-import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 
+import '../services/app_logger.dart';
 import 'app_local_db.dart';
 
 class NotificationPreferenceStorage {
   static const String _enabledKey = 'notifications_enabled';
   static const String _hourKey = 'notifications_hour';
   static const String _minuteKey = 'notifications_minute';
+
+  static bool _isMissingBoxError(Object error) =>
+      error is HiveError && error.toString().contains('Box not found');
 
   static bool getEnabled({bool fallback = true}) {
     try {
@@ -17,17 +20,21 @@ class NotificationPreferenceStorage {
       }
       return raw.toLowerCase() == 'true';
     } catch (e) {
-      debugPrint('Warning: Could not load notification preference: $e');
+      if (!_isMissingBoxError(e)) {
+        AppLogger.warn('Could not load notification preference: $e');
+      }
       return fallback;
     }
   }
 
-  static Future<void> setEnabled(bool enabled) async {
+  static Future<void> setEnabled({required bool enabled}) async {
     try {
       final box = Hive.box<String>(AppLocalDb.privacyBox);
       await box.put(_enabledKey, enabled.toString());
     } catch (e) {
-      debugPrint('Warning: Could not save notification preference: $e');
+      if (!_isMissingBoxError(e)) {
+        AppLogger.warn('Could not save notification preference: $e');
+      }
     }
   }
 
@@ -48,7 +55,9 @@ class NotificationPreferenceStorage {
 
       return (hour: hour, minute: minute);
     } catch (e) {
-      debugPrint('Warning: Could not load reminder time: $e');
+      if (!_isMissingBoxError(e)) {
+        AppLogger.warn('Could not load reminder time: $e');
+      }
       return (hour: fallbackHour, minute: fallbackMinute);
     }
   }
@@ -62,7 +71,9 @@ class NotificationPreferenceStorage {
       await box.put(_hourKey, hour.toString());
       await box.put(_minuteKey, minute.toString());
     } catch (e) {
-      debugPrint('Warning: Could not save reminder time: $e');
+      if (!_isMissingBoxError(e)) {
+        AppLogger.warn('Could not save reminder time: $e');
+      }
     }
   }
 }

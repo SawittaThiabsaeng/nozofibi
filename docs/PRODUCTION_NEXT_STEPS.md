@@ -16,6 +16,7 @@ This app is now close to production-ready. Complete these actions before pushing
 - Enforce App Check for Firebase services used by the app.
 - Restrict API keys by package/SHA-1 and web domain where applicable.
 - Verify Auth anti-abuse settings and monitoring alerts.
+- Supply the web App Check site key at build time with `--dart-define=FIREBASE_APP_CHECK_SITE_KEY=...`.
 
 4) Compliance checks
 - Verify in-app consent flows for Email and Google sign-in.

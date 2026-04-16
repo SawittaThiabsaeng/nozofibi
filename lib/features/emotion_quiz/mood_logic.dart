@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 
 class MoodResult {
-  final String name;
-  final String emoji;
-  final String message;
-  final Color color;
 
   MoodResult({
     required this.name,
@@ -12,6 +8,10 @@ class MoodResult {
     required this.message,
     required this.color,
   });
+  final String name;
+  final String emoji;
+  final String message;
+  final Color color;
 }
 
 String getMood(
@@ -116,7 +116,7 @@ MoodResult getMoodDetailsByMood(String moodName) {
         name: 'Focused',
         emoji: '🎯',
         message: "You're in deep focus mode",
-        color: const Color(0xFFA78BFA),
+        color: const Color(0xFF1E40AF),
       );
     case 'Motivated':
       return MoodResult(
@@ -158,7 +158,7 @@ MoodResult getMoodDetailsByMood(String moodName) {
         name: 'Sleepy',
         emoji: '😴',
         message: 'You seem low on energy',
-        color: const Color(0xFF94A3B8),
+        color: const Color(0xFF8B5CF6),
       );
     case 'Bored':
       return MoodResult(
@@ -188,12 +188,19 @@ MoodResult getMoodDetailsByMood(String moodName) {
         message: "It's okay to have off days",
         color: const Color(0xFF3B82F6),
       );
+    case 'Calm':
+      return MoodResult(
+        name: 'Calm',
+        emoji: '🌿',
+        message: 'You feel balanced',
+        color: const Color(0xFF06B6D4),
+      );
     default:
       return MoodResult(
         name: 'Calm',
         emoji: '🌿',
         message: 'You feel balanced',
-        color: const Color(0xFF10B981),
+        color: const Color(0xFF06B6D4),
       );
   }
 }
@@ -203,7 +210,7 @@ String getMoodMessage(String mood) {
     case 'Focused':
       return "You're in deep focus mode 🎯";
     case 'Motivated':
-      return "Your drive is strong. Keep it going.";
+      return 'Your drive is strong. Keep it going.';
     case 'Trying':
       return 'It was challenging, but you kept pushing.';
     case 'Calm':

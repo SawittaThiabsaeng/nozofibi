@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 
 class RollerTimePicker extends StatefulWidget {
-  final TimeOfDay initialTime;
-  final Function(TimeOfDay) onTimeSelected;
-
   const RollerTimePicker({
-    super.key,
     required this.initialTime,
     required this.onTimeSelected,
+    super.key,
   });
+  final TimeOfDay initialTime;
+  final Function(TimeOfDay) onTimeSelected;
 
   @override
   State<RollerTimePicker> createState() => _RollerTimePickerState();
@@ -26,8 +25,7 @@ class _RollerTimePickerState extends State<RollerTimePicker> {
     selectedHour = widget.initialTime.hour;
     selectedMinute = widget.initialTime.minute;
     hourController = FixedExtentScrollController(initialItem: selectedHour);
-    minuteController =
-        FixedExtentScrollController(initialItem: selectedMinute);
+    minuteController = FixedExtentScrollController(initialItem: selectedMinute);
   }
 
   @override
@@ -251,15 +249,15 @@ class _RollerTimePickerState extends State<RollerTimePicker> {
 Future<TimeOfDay?> showRollerTimePicker({
   required BuildContext context,
   required TimeOfDay initialTime,
-}) {
-  return showModalBottomSheet<TimeOfDay>(
-    context: context,
-    builder: (context) => RollerTimePicker(
-      initialTime: initialTime,
-      onTimeSelected: (_) {}, // Updates happen in real-time via callback
-    ),
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-  );
-}
+}) =>
+    showModalBottomSheet<TimeOfDay>(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (context) => RollerTimePicker(
+        initialTime: initialTime,
+        onTimeSelected: (_) {}, // Updates happen in real-time via callback
+      ),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+    );

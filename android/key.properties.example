@@ -1,4 +1,6 @@
-storePassword=YOUR_STORE_PASSWORD
-keyPassword=YOUR_KEY_PASSWORD
+# Keep passwords out of files. Provide these via environment variables:
+# NOZOFIBI_STORE_PASSWORD
+# NOZOFIBI_KEY_PASSWORD
+# Optional override for alias: NOZOFIBI_KEY_ALIAS
 keyAlias=YOUR_KEY_ALIAS
 storeFile=../keystore/release-keystore.jks

@@ -24,6 +24,17 @@ class ScheduleTask {
     this.focusMinutes = 0, // ✅ เพิ่มตัวนี้
   });
 
+  factory ScheduleTask.fromJson(Map<String, dynamic> json) => ScheduleTask(
+        id: (json['id'] ?? '').toString(),
+        date: DateTime.tryParse((json['date'] ?? '').toString()) ??
+            DateTime.now(),
+        time: (json['time'] ?? '').toString(),
+        title: (json['title'] ?? '').toString(),
+        type: _taskTypeFromName(json['type']?.toString()),
+        completed: json['completed'] == true,
+        focusMinutes: (json['focusMinutes'] as num?)?.toInt() ?? 0,
+      );
+
   final String id;
   final DateTime date;
   final String time;
@@ -63,14 +74,4 @@ class ScheduleTask {
         'completed': completed,
         'focusMinutes': focusMinutes,
       };
-
-  factory ScheduleTask.fromJson(Map<String, dynamic> json) => ScheduleTask(
-        id: (json['id'] ?? '').toString(),
-        date: DateTime.tryParse((json['date'] ?? '').toString()) ?? DateTime.now(),
-        time: (json['time'] ?? '').toString(),
-        title: (json['title'] ?? '').toString(),
-        type: _taskTypeFromName(json['type']?.toString()),
-        completed: json['completed'] == true,
-        focusMinutes: (json['focusMinutes'] as num?)?.toInt() ?? 0,
-      );
 }

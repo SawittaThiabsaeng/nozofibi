@@ -11,6 +11,12 @@ class EmotionCheckin {
     required this.date,
   });
 
+  factory EmotionCheckin.fromJson(Map<String, dynamic> json) => EmotionCheckin(
+        mood: (json['mood'] ?? '').toString(),
+        date: DateTime.tryParse((json['date'] ?? '').toString()) ??
+            DateTime.now(),
+      );
+
   final String mood;
   final DateTime date;
 
@@ -18,13 +24,6 @@ class EmotionCheckin {
         'mood': mood,
         'date': date.toIso8601String(),
       };
-
-  factory EmotionCheckin.fromJson(Map<String, dynamic> json) {
-    return EmotionCheckin(
-      mood: (json['mood'] ?? '').toString(),
-      date: DateTime.tryParse((json['date'] ?? '').toString()) ?? DateTime.now(),
-    );
-  }
 }
 
 class EmotionCheckinStorage {
@@ -47,7 +46,8 @@ class EmotionCheckinStorage {
     return '${_baseKey}_$uid';
   }
 
-  static DateTime _retentionCutoff() => DateTime.now().subtract(_retentionDuration);
+  static DateTime _retentionCutoff() =>
+      DateTime.now().subtract(_retentionDuration);
 
   static List<EmotionCheckin> _sanitizeAndSort(List<EmotionCheckin> checkins) {
     final cutoff = _retentionCutoff();
@@ -109,16 +109,15 @@ class EmotionCheckinStorage {
       final key = _currentUserKey();
       final box = Hive.box<String>(AppLocalDb.sessionsBox);
       final payload = box.get(key);
-      final checkins = payload == null || payload.isEmpty
+      final checkins = (payload == null || payload.isEmpty
           ? <EmotionCheckin>[]
-          : _decodeCheckins(payload);
-
-      checkins.add(
-        EmotionCheckin(
-          mood: mood,
-          date: date ?? DateTime.now(),
-        ),
-      );
+          : _decodeCheckins(payload))
+        ..add(
+          EmotionCheckin(
+            mood: mood,
+            date: date ?? DateTime.now(),
+          ),
+        );
 
       final sanitized = _sanitizeAndSort(checkins);
       await box.put(key, _encodeCheckins(sanitized));

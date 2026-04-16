@@ -1,10 +1,12 @@
-import 'package:flutter/material.dart';
 import 'dart:ui';
+
+import 'package:flutter/material.dart';
 
 class GlassCard extends StatelessWidget {
 
   const GlassCard({
-    required this.child, super.key,
+    required this.child,
+    super.key,
     this.padding,
     this.onTap,
     this.color,

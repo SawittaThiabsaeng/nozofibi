@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../theme/app_theme.dart';
-import '../models/task.dart';
-import '../widgets/glass_card.dart';
-import '../widgets/soft_background.dart';
-import '../widgets/roller_time_picker.dart';
-import '../screens/timer_view.dart';
+
 import '../l10n/app_strings.dart';
+import '../models/task.dart';
+import '../screens/timer_view.dart';
+import '../theme/app_theme.dart';
+import '../widgets/glass_card.dart';
+import '../widgets/roller_time_picker.dart';
+import '../widgets/soft_background.dart';
 
 class ScheduleView extends StatefulWidget {
   const ScheduleView({
-    super.key,
     required this.tasks,
     required this.onAddTask,
     required this.onToggle,
     required this.onDelete,
+    super.key,
     this.onSessionSaved,
   });
 
@@ -42,12 +43,11 @@ class _ScheduleViewState extends State<ScheduleView> {
         .toList();
 
     return Scaffold(
-     extendBody: true,
+      extendBody: true,
       body: SoftBackground(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 60, 24, 120),
           children: [
-
             /// HEADER
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -58,13 +58,29 @@ class _ScheduleViewState extends State<ScheduleView> {
                       ? AppTheme.h1.copyWith(color: Colors.white)
                       : AppTheme.h1,
                 ),
-                IconButton.filled(
-                  onPressed: _addTaskDialog,
-                  icon: const Icon(Icons.add),
-                  style: IconButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    fixedSize: const Size(52, 52),
-                  ),
+                Row(
+                  children: [
+                    IconButton.filledTonal(
+                      onPressed: _pickDateFromCalendar,
+                      icon: const Icon(Icons.calendar_month_rounded),
+                      style: IconButton.styleFrom(
+                        backgroundColor: isDark
+                            ? Colors.white.withValues(alpha: 0.08)
+                            : Colors.white,
+                        fixedSize: const Size(52, 52),
+                        foregroundColor: AppTheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    IconButton.filled(
+                      onPressed: _addTaskDialog,
+                      icon: const Icon(Icons.add),
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        fixedSize: const Size(52, 52),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -85,9 +101,14 @@ class _ScheduleViewState extends State<ScheduleView> {
               height: 90,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                itemCount: 14,
+                itemCount: 92,
                 itemBuilder: (context, i) {
-                  final d = DateTime.now().add(Duration(days: i - 2));
+                  final start = DateTime(
+                    DateTime.now().year,
+                    DateTime.now().month,
+                    DateTime.now().day,
+                  );
+                  final d = start.add(Duration(days: i));
                   final isSel = DateUtils.isSameDay(d, selectedDate);
 
                   return GestureDetector(
@@ -100,8 +121,8 @@ class _ScheduleViewState extends State<ScheduleView> {
                         color: isSel
                             ? AppTheme.primary
                             : isDark
-                                ? Colors.white.withOpacity(0.08)
-                                : Colors.white.withOpacity(0.5),
+                                ? Colors.white.withValues(alpha: 0.08)
+                                : Colors.white.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: Column(
@@ -112,9 +133,8 @@ class _ScheduleViewState extends State<ScheduleView> {
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: isSel
-                                  ? Colors.white70
-                                  : AppTheme.textMuted,
+                              color:
+                                  isSel ? Colors.white70 : AppTheme.textMuted,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -149,9 +169,7 @@ class _ScheduleViewState extends State<ScheduleView> {
                     s.noPlansToday,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: isDark
-                          ? Colors.white54
-                          : AppTheme.textMuted,
+                      color: isDark ? Colors.white54 : AppTheme.textMuted,
                     ),
                   ),
                 ),
@@ -186,10 +204,8 @@ class _ScheduleViewState extends State<ScheduleView> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color:
-                                AppTheme.primary.withOpacity(0.1),
-                            borderRadius:
-                                BorderRadius.circular(14),
+                            color: AppTheme.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(14),
                           ),
                           child: Icon(
                             _icon(t.type),
@@ -197,15 +213,11 @@ class _ScheduleViewState extends State<ScheduleView> {
                             color: AppTheme.primary,
                           ),
                         ),
-
                         const SizedBox(width: 14),
-
                         Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                            mainAxisSize:
-                                MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(t.time, style: AppTheme.caption),
                               const SizedBox(height: 4),
@@ -230,15 +242,15 @@ class _ScheduleViewState extends State<ScheduleView> {
                               Text(
                                 _taskTypeLabel(t.type, s),
                                 style: AppTheme.caption.copyWith(
-                                  color: isDark ? Colors.white70 : AppTheme.textMuted,
+                                  color: isDark
+                                      ? Colors.white70
+                                      : AppTheme.textMuted,
                                 ),
                               ),
                             ],
                           ),
                         ),
-
                         const SizedBox(width: 10),
-
                         Icon(
                           t.completed
                               ? Icons.check_circle
@@ -246,12 +258,9 @@ class _ScheduleViewState extends State<ScheduleView> {
                           size: 22,
                           color: AppTheme.primary,
                         ),
-
                         const SizedBox(width: 6),
-
                         IconButton(
-                          onPressed: () =>
-                              widget.onDelete(t.id),
+                          onPressed: () => widget.onDelete(t.id),
                           icon: const Icon(
                             Icons.delete_outline,
                             size: 20,
@@ -269,20 +278,22 @@ class _ScheduleViewState extends State<ScheduleView> {
     );
   }
 
-  void _addTaskDialog() {
-    final controller = TextEditingController();
-    TaskType selectedType = TaskType.study;
-    TimeOfDay selectedTime = TimeOfDay.now();
+  Future<void> _addTaskDialog() async {
+    await _addTaskDialogForDate(selectedDate);
+  }
 
+  Future<void> _addTaskDialogForDate(DateTime date) async {
+    final controller = TextEditingController();
+    var selectedType = TaskType.study;
+    var selectedTime = TimeOfDay.now();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    showModalBottomSheet(
+    final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).cardColor,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(40)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
       ),
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => Padding(
@@ -304,22 +315,14 @@ class _ScheduleViewState extends State<ScheduleView> {
               const SizedBox(height: 24),
               TextField(
                 controller: controller,
-                style: TextStyle(
-                    color:
-                        isDark ? Colors.white : Colors.black),
+                style: const TextStyle(color: Color(0xFF111827)),
                 decoration: InputDecoration(
                   hintText: AppStrings.of(context).whatPlanning,
-                  hintStyle: TextStyle(
-                      color: isDark
-                          ? Colors.white54
-                          : null),
+                  hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
                   filled: true,
-                  fillColor: isDark
-                      ? Colors.white.withOpacity(0.05)
-                      : Colors.grey[100],
+                  fillColor: const Color(0xFFF8FAFC),
                   border: OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(18),
                     borderSide: BorderSide.none,
                   ),
                 ),
@@ -347,7 +350,9 @@ class _ScheduleViewState extends State<ScheduleView> {
                       avatar: Icon(
                         _icon(type),
                         size: 16,
-                        color: selectedType == type ? Colors.white : AppTheme.primary,
+                        color: selectedType == type
+                            ? Colors.white
+                            : AppTheme.primary,
                       ),
                       label: Text(_taskTypeLabel(type, AppStrings.of(context))),
                       selected: selectedType == type,
@@ -375,11 +380,10 @@ class _ScheduleViewState extends State<ScheduleView> {
                   }
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.05)
-                        : Colors.grey[100],
+                    color: const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: Row(
@@ -397,9 +401,9 @@ class _ScheduleViewState extends State<ScheduleView> {
                             const SizedBox(height: 2),
                             Text(
                               selectedTime.format(context),
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : Colors.black,
+                                color: Color(0xFF111827),
                               ),
                             ),
                           ],
@@ -407,9 +411,9 @@ class _ScheduleViewState extends State<ScheduleView> {
                       ),
                       Text(
                         AppStrings.of(context).tapToChangeTime,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 11,
-                          color: isDark ? Colors.white70 : AppTheme.textMuted,
+                          color: Color(0xFF64748B),
                         ),
                       ),
                     ],
@@ -448,33 +452,32 @@ class _ScheduleViewState extends State<ScheduleView> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    if (controller.text.isNotEmpty) {
-                      widget.onAddTask(
-                        ScheduleTask(
-                          id: DateTime.now().toString(),
-                          date: selectedDate,
-                          time:
-                              selectedTime.format(context),
-                          title: controller.text,
-                          type: selectedType,
-                        ),
-                      );
-                      Navigator.pop(context);
+                    final title = controller.text.trim();
+                    if (title.isEmpty) {
+                      return;
                     }
+
+                    widget.onAddTask(
+                      ScheduleTask(
+                        id: DateTime.now().toString(),
+                        date: date,
+                        time: selectedTime.format(context),
+                        title: title,
+                        type: selectedType,
+                      ),
+                    );
+                    Navigator.pop(context, true);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primary,
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 18),
+                    padding: const EdgeInsets.symmetric(vertical: 18),
                     shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                   ),
                   child: Text(
                     AppStrings.of(context).savePlan,
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -483,6 +486,49 @@ class _ScheduleViewState extends State<ScheduleView> {
         ),
       ),
     );
+
+    if (!mounted || saved != true) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppStrings.of(context).planSaved)),
+    );
+  }
+
+  Future<void> _pickDateFromCalendar() async {
+    final now = DateTime.now();
+    final initialDate = selectedDate.isBefore(now) ? now : selectedDate;
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(now.year - 1),
+      lastDate: DateTime(now.year + 3),
+      helpText: AppStrings.of(context).schedule,
+      builder: (context, child) {
+        final pickerTheme = Theme.of(context).copyWith(
+          brightness: Brightness.light,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: AppTheme.primary,
+            brightness: Brightness.light,
+          ),
+          datePickerTheme: const DatePickerThemeData(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
+          ),
+        );
+        return Theme(
+          data: pickerTheme,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() => selectedDate = picked);
+      await _addTaskDialogForDate(picked);
+    }
   }
 
   IconData _icon(TaskType t) {

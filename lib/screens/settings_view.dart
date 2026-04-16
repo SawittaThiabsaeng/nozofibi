@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
-import '../widgets/soft_background.dart';
-import '../widgets/roller_time_picker.dart';
-import '../l10n/app_strings.dart';
+
 import '../data/language_preference_storage.dart';
 import '../data/notification_preference_storage.dart';
+import '../l10n/app_strings.dart';
 import '../services/notification_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/final_app_logo.dart';
+import '../widgets/roller_time_picker.dart';
+import '../widgets/soft_background.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({
-    super.key,
     required this.onBack,
     required this.onThemeChanged,
     required this.onDeleteMyData,
     required this.onDeleteAccount,
     required this.onLanguageChanged,
+    super.key,
   });
 
   final VoidCallback onBack;
-  final Function(bool) onThemeChanged;
+  final ValueChanged<bool> onThemeChanged;
   final Function(String) onLanguageChanged;
   final Future<void> Function() onDeleteMyData;
   final Future<void> Function() onDeleteAccount;
@@ -50,6 +52,16 @@ class _SettingsViewState extends State<SettingsView> {
         extendBodyBehindAppBar: true,
         appBar: AppBar(
           title: Text(AppStrings.of(context).settings, style: AppTheme.h2),
+          actions: const [
+            Padding(
+              padding: EdgeInsets.only(right: 14),
+              child: SizedBox(
+                width: 26,
+                height: 26,
+                child: NozofibiLogo(size: 26),
+              ),
+            ),
+          ],
           backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
           scrolledUnderElevation: 0,
@@ -70,7 +82,6 @@ class _SettingsViewState extends State<SettingsView> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(24, 100, 24, 24),
             children: [
-              
               _section(AppStrings.of(context).preferences),
               _switchTile(
                 AppStrings.of(context).pushNotifications,
@@ -133,7 +144,7 @@ class _SettingsViewState extends State<SettingsView> {
         child: Text(t, style: AppTheme.caption),
       );
 
-  Widget _switchTile(String t, bool v, Function(bool) c) => ListTile(
+  Widget _switchTile(String t, bool v, ValueChanged<bool> c) => ListTile(
         title: Text(t, style: AppTheme.bodyBold),
         trailing: Switch(
           value: v,
@@ -155,7 +166,8 @@ class _SettingsViewState extends State<SettingsView> {
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 4),
-          child: Text(AppStrings.of(context).reminderTime, style: AppTheme.caption),
+          child: Text(AppStrings.of(context).reminderTime,
+              style: AppTheme.caption),
         ),
         const SizedBox(height: 8),
         InkWell(
@@ -205,7 +217,8 @@ class _SettingsViewState extends State<SettingsView> {
               TimeOfDay(hour: 21, minute: 0),
             ])
               ChoiceChip(
-                label: Text(MaterialLocalizations.of(context).formatTimeOfDay(preset)),
+                label: Text(
+                    MaterialLocalizations.of(context).formatTimeOfDay(preset)),
                 selected: preset.hour == _reminderTime.hour &&
                     preset.minute == _reminderTime.minute,
                 onSelected: (_) => _setReminderTime(preset),
@@ -222,7 +235,7 @@ class _SettingsViewState extends State<SettingsView> {
       title: Text(s.language, style: AppTheme.bodyBold),
       trailing: DropdownButton<String>(
         value: _selectedLanguage,
-        underline: SizedBox(),
+        underline: const SizedBox(),
         items: [
           DropdownMenuItem(
             value: 'en',
@@ -246,61 +259,70 @@ class _SettingsViewState extends State<SettingsView> {
   }
 
   Future<void> _onNotificationsChanged(bool enabled) async {
-    final s = AppStrings.of(context);
+    final strings = AppStrings.of(context);
+    final messenger = ScaffoldMessenger.of(context);
 
     if (enabled) {
       final granted = await NotificationService.requestPermissionIfNeeded();
       if (!granted) {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
         setState(() {
           _notifications = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(s.notificationsDisabled)),
+        messenger.showSnackBar(
+          SnackBar(content: Text(strings.notificationsDisabled)),
         );
-        await NotificationPreferenceStorage.setEnabled(false);
+        await NotificationPreferenceStorage.setEnabled(enabled: false);
         return;
       }
 
       try {
         await NotificationService.scheduleDailyReminder(
-          title: s.dailyReminderTitle,
-          body: s.dailyReminderBody,
+          title: strings.dailyReminderTitle,
+          body: strings.dailyReminderBody,
           hour: _reminderTime.hour,
           minute: _reminderTime.minute,
         );
-        await NotificationPreferenceStorage.setEnabled(true);
+        await NotificationPreferenceStorage.setEnabled(enabled: true);
       } catch (_) {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
         setState(() {
           _notifications = false;
         });
-        await NotificationPreferenceStorage.setEnabled(false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(s.notificationsDisabled)),
+        await NotificationPreferenceStorage.setEnabled(enabled: false);
+        messenger.showSnackBar(
+          SnackBar(content: Text(strings.notificationsDisabled)),
         );
         return;
       }
 
-      if (!mounted) return;
+      if (!context.mounted) {
+        return;
+      }
       setState(() {
         _notifications = true;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.notificationsEnabled)),
+      messenger.showSnackBar(
+        SnackBar(content: Text(strings.notificationsEnabled)),
       );
       return;
     }
 
     await NotificationService.cancelDailyReminder();
-    await NotificationPreferenceStorage.setEnabled(false);
+    await NotificationPreferenceStorage.setEnabled(enabled: false);
 
-    if (!mounted) return;
+    if (!context.mounted) {
+      return;
+    }
     setState(() {
       _notifications = false;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(s.notificationsDisabled)),
+    messenger.showSnackBar(
+      SnackBar(content: Text(strings.notificationsDisabled)),
     );
   }
 
@@ -323,6 +345,9 @@ class _SettingsViewState extends State<SettingsView> {
   }
 
   Future<void> _setReminderTime(TimeOfDay picked) async {
+    final strings = AppStrings.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
     if (!mounted) {
       return;
     }
@@ -337,17 +362,16 @@ class _SettingsViewState extends State<SettingsView> {
     );
 
     if (_notifications) {
-      final s = AppStrings.of(context);
       await NotificationService.scheduleDailyReminder(
-        title: s.dailyReminderTitle,
-        body: s.dailyReminderBody,
+        title: strings.dailyReminderTitle,
+        body: strings.dailyReminderBody,
         hour: picked.hour,
         minute: picked.minute,
       );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.notificationsEnabled)),
-      );
+      if (!context.mounted) {
+        return;
+      }
+      messenger.showSnackBar(SnackBar(content: Text(strings.notificationsEnabled)));
     }
   }
 
@@ -373,20 +397,30 @@ class _SettingsViewState extends State<SettingsView> {
   }) {
     showDialog<void>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(title),
-          content: SingleChildScrollView(
-            child: Text(body),
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        titleTextStyle: const TextStyle(
+          color: Color(0xFF111827),
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+        ),
+        contentTextStyle: const TextStyle(
+          color: Color(0xFF111827),
+          fontSize: 14,
+          height: 1.45,
+        ),
+        title: Text(title),
+        content: SingleChildScrollView(
+          child: SelectableText(body),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(AppStrings.of(context).close),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(AppStrings.of(context).close),
-            ),
-          ],
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -399,6 +433,18 @@ class _SettingsViewState extends State<SettingsView> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        titleTextStyle: const TextStyle(
+          color: Color(0xFF111827),
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+        ),
+        contentTextStyle: const TextStyle(
+          color: Color(0xFF111827),
+          fontSize: 14,
+          height: 1.45,
+        ),
         title: Text(title),
         content: Text(body),
         actions: [

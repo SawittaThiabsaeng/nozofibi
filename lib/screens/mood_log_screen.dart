@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 
 import '../data/emotion_checkin_storage.dart';
@@ -55,7 +56,10 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isThai = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('th');
+    final isThai = Localizations.localeOf(context)
+        .languageCode
+        .toLowerCase()
+        .startsWith('th');
     final localeTag = Localizations.localeOf(context).toLanguageTag();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -109,20 +113,19 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                         ),
                       ),
                     )
-                  else
-                    ...[
-                      _weeklyMoodChart(
-                        context: context,
-                        isThai: isThai,
-                        localeTag: localeTag,
-                      ),
-                      const SizedBox(height: 8),
-                      ..._buildGroupedHistory(
-                        context: context,
-                        isThai: isThai,
-                        localeTag: localeTag,
-                      ),
-                    ],
+                  else ...[
+                    _weeklyMoodChart(
+                      context: context,
+                      isThai: isThai,
+                      localeTag: localeTag,
+                    ),
+                    const SizedBox(height: 8),
+                    ..._buildGroupedHistory(
+                      context: context,
+                      isThai: isThai,
+                      localeTag: localeTag,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -145,8 +148,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
       grouped.putIfAbsent(key, () => <EmotionCheckin>[]).add(item);
     }
 
-    final keys = grouped.keys.toList()
-      ..sort((a, b) => b.compareTo(a));
+    final keys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
 
     final widgets = <Widget>[];
 
@@ -154,67 +156,80 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
       final list = grouped[key]!;
       final label = _dayLabel(list.first.date, isThai, localeTag);
 
-      widgets.add(
-        Padding(
-          padding: const EdgeInsets.only(top: 14, bottom: 8),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isDark ? Colors.white : AppTheme.textDark,
-              fontWeight: FontWeight.w800,
-              fontSize: 16,
+      widgets
+        ..add(
+          Padding(
+            padding: const EdgeInsets.only(top: 14, bottom: 8),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isDark ? Colors.white : AppTheme.textDark,
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+              ),
             ),
           ),
-        ),
-      );
+        )
+        ..add(
+          GlassCard(
+            child: Column(
+              children: list.map((entry) {
+                final details = getMoodDetailsByMood(entry.mood);
+                final localizedName =
+                    getMoodNameForLocale(entry.mood, isThai: isThai);
+                final timeText =
+                    DateFormat('HH:mm', localeTag).format(entry.date);
+                final moodAsset = getMoodSvgAsset(entry.mood);
 
-      widgets.add(
-        GlassCard(
-          child: Column(
-            children: list.map((entry) {
-              final details = getMoodDetailsByMood(entry.mood);
-              final localizedName = getMoodNameForLocale(entry.mood, isThai: isThai);
-              final timeText = DateFormat('HH:mm', localeTag).format(entry.date);
-
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: details.color.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(12),
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: details.color.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: moodAsset != null
+                            ? SvgPicture.asset(
+                                moodAsset,
+                                width: 26,
+                                height: 26,
+                                fit: BoxFit.contain,
+                              )
+                            : Text(
+                                details.emoji,
+                                style: const TextStyle(fontSize: 22),
+                              ),
                       ),
-                      alignment: Alignment.center,
-                      child: Text(details.emoji, style: const TextStyle(fontSize: 22)),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        localizedName,
-                        style: TextStyle(
-                          color: isDark ? Colors.white : AppTheme.textDark,
-                          fontWeight: FontWeight.w700,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          localizedName,
+                          style: TextStyle(
+                            color: isDark ? Colors.white : AppTheme.textDark,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                    ),
-                    Text(
-                      timeText,
-                      style: TextStyle(
-                        color: isDark ? Colors.white60 : AppTheme.textMuted,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
+                      Text(
+                        timeText,
+                        style: TextStyle(
+                          color: isDark ? Colors.white60 : AppTheme.textMuted,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
           ),
-        ),
-      );
+        );
     }
 
     return widgets;

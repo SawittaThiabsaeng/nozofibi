@@ -8,8 +8,7 @@ Widget _buildSettingsView({
   required ValueChanged<String> onLanguageChanged,
   required Future<void> Function() onDeleteMyData,
   required Future<void> Function() onDeleteAccount,
-}) {
-  return MaterialApp(
+}) => MaterialApp(
     home: SettingsView(
       onBack: onBack,
       onThemeChanged: onThemeChanged,
@@ -18,7 +17,6 @@ Widget _buildSettingsView({
       onDeleteAccount: onDeleteAccount,
     ),
   );
-}
 
 void main() {
   testWidgets('Delete My Local Data calls callback when confirmed',
@@ -38,11 +36,11 @@ void main() {
     );
 
     await tester.tap(find.widgetWithText(ListTile, 'Delete My Local Data'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('Delete Local Data'), findsOneWidget);
     await tester.tap(find.widgetWithText(TextButton, 'Confirm'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(localDeleteCalled, isTrue);
   });
@@ -64,9 +62,9 @@ void main() {
     );
 
     await tester.tap(find.widgetWithText(ListTile, 'Delete My Local Data'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(localDeleteCalled, isFalse);
   });
@@ -87,7 +85,7 @@ void main() {
     );
 
     await tester.tap(find.byType(Switch).at(1));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(latestThemeValue, isTrue);
   });
@@ -104,27 +102,27 @@ void main() {
     );
 
     await tester.drag(find.byType(ListView), const Offset(0, -250));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
     await tester.tap(find.widgetWithText(ListTile, 'Terms of Service'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Terms of Service'), findsNWidgets(2));
     expect(find.text('Close'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(TextButton, 'Close'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.byType(AlertDialog), findsNothing);
 
     // Scroll down to find Privacy Policy ListTile
     await tester.drag(find.byType(ListView), const Offset(0, -300));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
     await tester.tap(find.widgetWithText(ListTile, 'Privacy Policy'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Privacy Policy'), findsNWidgets(2));
 
     await tester.tap(find.widgetWithText(TextButton, 'Close'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.byType(AlertDialog), findsNothing);
   });
 }

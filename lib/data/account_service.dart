@@ -3,6 +3,34 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../services/app_logger.dart';
+
+/// Model for consent records
+class ConsentRecord {
+  ConsentRecord({
+    required this.id,
+    required this.version,
+    required this.accepted,
+    required this.timestamp,
+  });
+
+  factory ConsentRecord.fromMap(Map<String, dynamic> map) => ConsentRecord(
+        id: map['id'] ?? '',
+        version: map['version'] ?? '',
+        accepted: map['accepted'] ?? false,
+        timestamp: AccountService._parseTimestamp(map['timestamp']),
+      );
+
+  @override
+  String toString() =>
+      'ConsentRecord(version=$version, accepted=$accepted, timestamp=$timestamp)';
+
+  final String id;
+  final String version;
+  final bool accepted;
+  final DateTime timestamp;
+}
+
 /// Service for user accounts and compliance operations
 /// 
 /// Handles:
@@ -62,6 +90,7 @@ class AccountService {
   static Future<bool> submitConsent({
     required bool accepted,
     String? customVersion,
+    bool marketingOptIn = false,
   }) async {
     try {
       final user = _auth.currentUser;
@@ -79,6 +108,8 @@ class AccountService {
           .add({
         'version': version,
         'accepted': accepted,
+        'requiredConsentAccepted': accepted,
+        'marketingConsentOptIn': marketingOptIn,
         'timestamp': timestamp,
         'source': 'client',
       });
@@ -86,18 +117,18 @@ class AccountService {
       await _firestore.collection('users').doc(user.uid).set({
         'consentVersion': version,
         'consented': accepted,
+        'requiredConsentAccepted': accepted,
+        'marketingConsentOptIn': marketingOptIn,
         'lastConsentAccepted': timestamp,
       }, SetOptions(merge: true));
 
-      debugPrint(
-        'Consent submitted successfully: $accepted (version $version)',
-      );
+      AppLogger.info('Consent submitted successfully');
       return true;
     } on FirebaseException catch (e) {
-      debugPrint('Firestore error: ${e.code} - ${e.message}');
+      AppLogger.error('Consent submit Firestore error ${e.code}', error: e);
       throw Exception('Failed to submit consent: ${e.message ?? e.code}');
     } catch (e) {
-      debugPrint('Error submitting consent: $e');
+      AppLogger.error('Error submitting consent', error: e);
       rethrow;
     }
   }
@@ -124,10 +155,10 @@ class AccountService {
               }))
           .toList();
     } on FirebaseException catch (e) {
-      debugPrint('Firestore error: ${e.code} - ${e.message}');
+      AppLogger.error('Consent history Firestore error ${e.code}', error: e);
       throw Exception('Failed to fetch consent history: ${e.message ?? e.code}');
     } catch (e) {
-      debugPrint('Error fetching consent history: $e');
+      AppLogger.error('Error fetching consent history', error: e);
       rethrow;
     }
   }
@@ -144,16 +175,16 @@ class AccountService {
       }
 
       final userId = user.uid;
-      debugPrint('Initiating account deletion for user: $userId');
+      AppLogger.info('Initiating account deletion');
 
       await _deleteUserData(userId: userId, reason: reason);
       await _deleteAuthUser(user);
       await _auth.signOut();
 
-      debugPrint('Account deleted successfully');
+      AppLogger.info('Account deleted successfully');
       return true;
     } on FirebaseAuthException catch (e) {
-      debugPrint('Auth error: ${e.code} - ${e.message}');
+      AppLogger.error('Account deletion auth error ${e.code}', error: e);
       if (e.code == 'requires-recent-login') {
         if (allowReauthRetry && await _tryReauthenticateCurrentUser()) {
           return deleteAccount(
@@ -165,10 +196,10 @@ class AccountService {
       }
       throw Exception('Failed to delete account: ${e.message ?? e.code}');
     } on FirebaseException catch (e) {
-      debugPrint('Firestore error: ${e.code} - ${e.message}');
+      AppLogger.error('Account deletion Firestore error ${e.code}', error: e);
       throw Exception('Failed to delete account data: ${e.message ?? e.code}');
     } catch (e) {
-      debugPrint('Error deleting account: $e');
+      AppLogger.error('Error deleting account', error: e);
       rethrow;
     }
   }
@@ -189,22 +220,27 @@ class AccountService {
     }
 
     try {
-      final googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) {
-        return false;
+      if (kIsWeb) {
+        final provider = GoogleAuthProvider();
+        await user.reauthenticateWithPopup(provider);
+      } else {
+        final googleUser = await GoogleSignIn().signIn();
+        if (googleUser == null) {
+          return false;
+        }
+
+        final googleAuth = await googleUser.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+
+        await user.reauthenticateWithCredential(credential);
       }
-
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      await user.reauthenticateWithCredential(credential);
-      debugPrint('Re-authentication successful for user: ${user.uid}');
+      AppLogger.info('Re-authentication successful');
       return true;
     } catch (e) {
-      debugPrint('Re-authentication failed: $e');
+      AppLogger.error('Re-authentication failed', error: e);
       return false;
     }
   }
@@ -239,35 +275,21 @@ class AccountService {
     }
 
     await userDoc.set({
+      'displayName': 'Deleted User',
+      'email': _anonymizedEmailFromUserId(userId),
+      'fullName': 'Deleted User',
+      'isDeleted': true,
       'deletedAt': FieldValue.serverTimestamp(),
       'deleteReason': reason,
+      'consented': false,
+      'requiredConsentAccepted': false,
+      'marketingConsentOptIn': false,
     }, SetOptions(merge: true));
-
-    await userDoc.delete();
   }
-}
 
-/// Model for consent records
-class ConsentRecord {
-  final String id;
-  final String version;
-  final bool accepted;
-  final DateTime timestamp;
-
-  ConsentRecord({
-    required this.id,
-    required this.version,
-    required this.accepted,
-    required this.timestamp,
-  });
-
-  factory ConsentRecord.fromMap(Map<String, dynamic> map) {
-    return ConsentRecord(
-      id: map['id'] ?? '',
-      version: map['version'] ?? '',
-      accepted: map['accepted'] ?? false,
-      timestamp: _parseTimestamp(map['timestamp']),
-    );
+  static String _anonymizedEmailFromUserId(String userId) {
+    final safe = userId.length > 8 ? userId.substring(0, 8) : userId;
+    return 'deleted_$safe@void.local';
   }
 
   static DateTime _parseTimestamp(dynamic timestamp) {
@@ -279,8 +301,4 @@ class ConsentRecord {
     }
     return DateTime.now();
   }
-
-  @override
-  String toString() =>
-      'ConsentRecord(version=$version, accepted=$accepted, timestamp=$timestamp)';
 }

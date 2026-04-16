@@ -1,12 +1,15 @@
 import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../data/privacy_storage.dart';
 import '../l10n/app_strings.dart';
+import '../services/app_logger.dart';
+import '../widgets/brand_wordmark.dart';
+import '../widgets/final_app_logo.dart';
 
 class LoginScreen extends StatefulWidget {
   LoginScreen({
@@ -65,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await widget.auth.signOut();
       await widget.googleSignIn.signOut();
     } catch (e) {
-      debugPrint('Session cleanup on login screen: $e');
+      AppLogger.warn('Session cleanup on login screen failed');
     }
   }
 
@@ -251,11 +254,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
       _showErrorSnackBar(message);
     } catch (e) {
-      debugPrint('Unexpected sign-in error: $e (${e.runtimeType})');
+      AppLogger.error('Unexpected sign-in error', error: e);
       if (kDebugMode) {
         _showErrorSnackBar('Debug: $e');
       } else {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
         _showErrorSnackBar(AppStrings.of(context).authFailedTryAgain);
       }
     } finally {
@@ -267,12 +272,29 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _showPolicyDialog({required String title, required String body}) {
+  void _showPolicyDialog({
+    required BuildContext dialogContext,
+    required String title,
+    required String body,
+  }) {
     showDialog<void>(
-      context: context,
+      context: dialogContext,
+      useRootNavigator: true,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        titleTextStyle: const TextStyle(
+          color: Color(0xFF111827),
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+        ),
+        contentTextStyle: const TextStyle(
+          color: Color(0xFF111827),
+          fontSize: 14,
+          height: 1.45,
+        ),
         title: Text(title),
-        content: SingleChildScrollView(child: Text(body)),
+        content: SingleChildScrollView(child: SelectableText(body)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -312,7 +334,8 @@ class _LoginScreenState extends State<LoginScreen> {
       case 'too-many-requests':
         return s.tooManyRequests;
       case 'network-request-failed':
-        return s.pick('No internet connection', 'ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้');
+        return s.pick(
+            'No internet connection', 'ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้');
       default:
         return s.resetPasswordFailed;
     }
@@ -339,11 +362,12 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _sendPasswordResetEmailBestEffort(String email) async {
-    final localeCode = Localizations.localeOf(context).languageCode.toLowerCase();
+    final localeCode =
+        Localizations.localeOf(context).languageCode.toLowerCase();
     try {
       await widget.auth.setLanguageCode(localeCode);
     } catch (e) {
-      debugPrint('Could not set reset-email language: $e');
+      AppLogger.warn('Could not set reset-email language');
     }
 
     final settings = _buildResetActionCodeSettings();
@@ -358,7 +382,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!_isActionCodeSettingsConfigurationError(e.code)) {
           rethrow;
         }
-        debugPrint('Reset ActionCodeSettings fallback: ${e.code}');
+        AppLogger.warn('Reset ActionCodeSettings fallback');
       }
     }
 
@@ -376,7 +400,8 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showResetPasswordSentNotice() {
     final s = AppStrings.of(context);
     final senderHint = _resetEmailSenderHint();
-    final notice = '${s.resetEmailSentNotice}\n${s.resetEmailDeliverabilityTips(senderHint)}';
+    final notice =
+        '${s.resetEmailSentNotice}\n${s.resetEmailDeliverabilityTips(senderHint)}';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(notice),
@@ -415,7 +440,8 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 16),
             Row(
               children: [
-                const Icon(Icons.mark_email_read_outlined, color: Color(0xFFA78BFA)),
+                const Icon(Icons.mark_email_read_outlined,
+                    color: Color(0xFFA78BFA)),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -576,7 +602,9 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       _showErrorSnackBar(AppStrings.of(context).googleSignInFailed);
     } finally {
       if (mounted) {
@@ -636,22 +664,136 @@ class _LoginScreenState extends State<LoginScreen> {
       return customPrompt(context);
     }
 
+    var acceptedPolicy = false;
+
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text(AppStrings.of(context).consentRequired),
-        content: Text(AppStrings.of(context).consentBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(AppStrings.of(context).decline),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(AppStrings.of(context).agree),
-          ),
-        ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final s = AppStrings.of(context);
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
+            titleTextStyle: const TextStyle(
+              color: Color(0xFF111827),
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+            contentTextStyle: const TextStyle(
+              color: Color(0xFF111827),
+              fontSize: 14,
+              height: 1.45,
+            ),
+            title: Text(s.consentRequired),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(s.consentBody),
+                const SizedBox(height: 14),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: Checkbox(
+                        value: acceptedPolicy,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                        onChanged: (value) {
+                          setDialogState(() {
+                            acceptedPolicy = value ?? false;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 2,
+                        runSpacing: 2,
+                        children: [
+                          Text(
+                            s.iAgreeTo,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              height: 1.3,
+                              color: Color(0xFF374151),
+                            ),
+                          ),
+                          InkWell(
+                            borderRadius: BorderRadius.circular(4),
+                            onTap: () => _showPolicyDialog(
+                              dialogContext: context,
+                              title: s.privacyPolicy,
+                              body: s.privacyText,
+                            ),
+                            child: Text(
+                              s.privacyPolicy,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                height: 1.3,
+                                color: Color(0xFFA78BFA),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            s.andWord,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              height: 1.3,
+                              color: Color(0xFF374151),
+                            ),
+                          ),
+                          InkWell(
+                            borderRadius: BorderRadius.circular(4),
+                            onTap: () => _showPolicyDialog(
+                              dialogContext: context,
+                              title: s.termsOfService,
+                              body: s.termsText,
+                            ),
+                            child: Text(
+                              s.termsOfService,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                height: 1.3,
+                                color: Color(0xFFA78BFA),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            s.dot,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              height: 1.3,
+                              color: Color(0xFF374151),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(s.decline),
+              ),
+              TextButton(
+                onPressed:
+                    acceptedPolicy ? () => Navigator.pop(context, true) : null,
+                child: Text(s.agree),
+              ),
+            ],
+          );
+        },
       ),
     );
 
@@ -721,31 +863,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           children: [
                             Column(
                               children: [
-                                SvgPicture.asset(
-                                  'assets/images/light.svg',
-                                  width: 120,
-                                  fit: BoxFit.contain,
-                                ),
+                                const NozofibiLogo(size: 108),
                                 const SizedBox(height: 12),
-                                ShaderMask(
-                                  shaderCallback: (bounds) => const LinearGradient(
-                                    begin: Alignment.centerLeft,
-                                    end: Alignment.centerRight,
-                                    colors: [
-                                      Color(0xFF3B82F6),
-                                      Color(0xFF9333EA),
-                                    ],
-                                  ).createShader(bounds),
-                                  child: const Text(
-                                    'NOZOFIBI',
-                                    style: TextStyle(
-                                      fontSize: 32,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 2,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
+                                const NozofibiText(fontSize: 44),
                                 const SizedBox(height: 4),
                                 Text(
                                   s.elevateFocusLife,
@@ -808,7 +928,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     hint: s.password,
                                     icon: Icons.lock_outline,
                                     isPassword: true,
-                                    errorText: _isLogin ? _loginInlineError : null,
+                                    errorText:
+                                        _isLogin ? _loginInlineError : null,
                                     isPasswordVisible: _isPasswordVisible,
                                     validator: _validatePassword,
                                     onChanged: (_) {
@@ -820,7 +941,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     },
                                     onToggleVisibility: () {
                                       setState(() {
-                                        _isPasswordVisible = !_isPasswordVisible;
+                                        _isPasswordVisible =
+                                            !_isPasswordVisible;
                                       });
                                     },
                                   ),
@@ -839,7 +961,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                               _isSendingResetEmail
                                                   ? s.sending
                                                   : _resetCooldownSeconds > 0
-                                                      ? s.tryAgainInSec(_resetCooldownSeconds)
+                                                      ? s.tryAgainInSec(
+                                                          _resetCooldownSeconds)
                                                       : s.forgotPassword,
                                               style: const TextStyle(
                                                 color: Color(0xFFA78BFA),
@@ -864,21 +987,26 @@ class _LoginScreenState extends State<LoginScreen> {
                                   if (!_isLogin) ...[
                                     const SizedBox(height: 8),
                                     Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Padding(
-                                          padding: const EdgeInsets.only(top: 2),
+                                          padding:
+                                              const EdgeInsets.only(top: 2),
                                           child: SizedBox(
                                             width: 24,
                                             height: 24,
                                             child: Checkbox(
                                               value: _acceptedPolicy,
                                               materialTapTargetSize:
-                                                  MaterialTapTargetSize.shrinkWrap,
-                                              visualDensity: VisualDensity.compact,
+                                                  MaterialTapTargetSize
+                                                      .shrinkWrap,
+                                              visualDensity:
+                                                  VisualDensity.compact,
                                               onChanged: (value) {
                                                 setState(() {
-                                                  _acceptedPolicy = value ?? false;
+                                                  _acceptedPolicy =
+                                                      value ?? false;
                                                 });
                                               },
                                             ),
@@ -887,7 +1015,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                         const SizedBox(width: 10),
                                         Expanded(
                                           child: Wrap(
-                                            crossAxisAlignment: WrapCrossAlignment.center,
+                                            crossAxisAlignment:
+                                                WrapCrossAlignment.center,
                                             spacing: 2,
                                             runSpacing: 2,
                                             children: [
@@ -899,10 +1028,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                                   color: Color(0xFF374151),
                                                 ),
                                               ),
-                                              GestureDetector(
+                                              InkWell(
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
                                                 onTap: () => _showPolicyDialog(
+                                                  dialogContext: context,
                                                   title: s.privacyPolicy,
-                                                  body: AppStrings.of(context).pick(
+                                                  body: AppStrings.of(context)
+                                                      .pick(
                                                     'We collect only required account and productivity data to provide authentication, scheduling, and analytics. You can request deletion from Settings.',
                                                     'เราเก็บเฉพาะข้อมูลบัญชีและข้อมูลการใช้งานที่จำเป็นต่อการเข้าสู่ระบบ ตารางงาน และสถิติ คุณสามารถขอลบข้อมูลได้จากหน้า Settings',
                                                   ),
@@ -925,10 +1058,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                                   color: Color(0xFF374151),
                                                 ),
                                               ),
-                                              GestureDetector(
+                                              InkWell(
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
                                                 onTap: () => _showPolicyDialog(
+                                                  dialogContext: context,
                                                   title: s.termsOfService,
-                                                  body: AppStrings.of(context).pick(
+                                                  body: AppStrings.of(context)
+                                                      .pick(
                                                     'By creating an account, you agree to use this app responsibly and according to applicable laws.',
                                                     'เมื่อสร้างบัญชี คุณยอมรับการใช้งานแอปอย่างเหมาะสมและตามกฎหมายที่เกี่ยวข้อง',
                                                   ),
@@ -962,13 +1099,16 @@ class _LoginScreenState extends State<LoginScreen> {
                                     width: double.infinity,
                                     height: 55,
                                     child: ElevatedButton(
-                                      onPressed: (_isLogin && _isLoginLocked) || _isSubmitting
+                                      onPressed: (_isLogin && _isLoginLocked) ||
+                                              _isSubmitting
                                           ? null
                                           : _submit,
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFFA78BFA),
+                                        backgroundColor:
+                                            const Color(0xFFA78BFA),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(20),
+                                          borderRadius:
+                                              BorderRadius.circular(20),
                                         ),
                                       ),
                                       child: _isSubmitting
@@ -977,13 +1117,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                               height: 20,
                                               child: CircularProgressIndicator(
                                                 strokeWidth: 2.4,
-                                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                                valueColor:
+                                                    AlwaysStoppedAnimation<
+                                                        Color>(Colors.white),
                                               ),
                                             )
                                           : Text(
                                               (_isLogin && _isLoginLocked)
-                                                  ? s.tryAgainInSec(_remainingLockSeconds)
-                                                  : (_isLogin ? s.signIn : s.signUp),
+                                                  ? s.tryAgainInSec(
+                                                      _remainingLockSeconds)
+                                                  : (_isLogin
+                                                      ? s.signIn
+                                                      : s.signUp),
                                               style: const TextStyle(
                                                 fontWeight: FontWeight.bold,
                                               ),
@@ -998,7 +1143,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                     child: _socialButton(
                                       text: s.google,
                                       icon: _googleIcon(),
-                                      onPressed: _isSubmitting ? null : _signInWithGoogle,
+                                      onPressed: _isSubmitting
+                                          ? null
+                                          : _signInWithGoogle,
                                     ),
                                   ),
                                 ],

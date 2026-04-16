@@ -1,60 +1,57 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 class SoftBackground extends StatelessWidget {
+  const SoftBackground({required this.child, super.key});
+
   final Widget child;
 
-  const SoftBackground({super.key, required this.child});
+  @override
+  Widget build(BuildContext context) => Stack(
+        children: [
+          /// Base Background (รองรับ Dark Mode)
+          Container(
+            color: Theme.of(context).scaffoldBackgroundColor,
+          ),
 
-@override
-Widget build(BuildContext context) {
-  return Stack(
-    children: [
+          /// Top Right Purple Blur
+          Positioned(
+            top: -130,
+            right: -130,
+            child: _blurCircle(
+              color: const Color(0xFF8B5CF6),
+              size: 320,
+            ),
+          ),
 
-      /// Base Background (รองรับ Dark Mode)
-      Container(
-        color: Theme.of(context).scaffoldBackgroundColor,
-      ),
+          /// Bottom Left Blue Blur
+          Positioned(
+            bottom: -130,
+            left: -130,
+            child: _blurCircle(
+              color: const Color(0xFF60A5FA),
+              size: 320,
+            ),
+          ),
 
-      /// Top Right Purple Blur
-      Positioned(
-        top: -120,
-        right: -120,
-        child: _blurCircle(
-          color: const Color(0xFF8B5CF6),
-          size: 300,
-        ),
-      ),
-
-      /// Bottom Left Blue Blur
-      Positioned(
-        bottom: -150,
-        left: -150,
-        child: _blurCircle(
-          color: const Color(0xFF60A5FA),
-          size: 350,
-        ),
-      ),
-
-      child,
-    ],
-  );
-}
+          child,
+        ],
+      );
 
   Widget _blurCircle({
     required Color color,
     required double size,
-  }) {
-    return ImageFiltered(
-      imageFilter: ImageFilter.blur(sigmaX: 72, sigmaY: 72),
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: color.withOpacity(0.32),
+  }) =>
+      ImageFiltered(
+        imageFilter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: color.withValues(alpha: 0.32),
+          ),
         ),
-      ),
-    );
-  }
+      );
 }

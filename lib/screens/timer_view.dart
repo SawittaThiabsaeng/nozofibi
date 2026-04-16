@@ -1,14 +1,16 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
+
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../theme/app_theme.dart';
-import '../models/task.dart';
-import '../models/focus_session.dart';
-import '../providers/study_session_provider.dart';
-import '../widgets/roller_duration_picker.dart';
+
 import '../l10n/app_strings.dart';
+import '../models/focus_session.dart';
+import '../models/task.dart';
+import '../providers/study_session_provider.dart';
+import '../theme/app_theme.dart';
+import '../widgets/roller_duration_picker.dart';
 
 class TimerView extends StatefulWidget {
   const TimerView({
@@ -94,10 +96,22 @@ class _TimerViewState extends State<TimerView> {
   Future<void> saveTimer() async {
     timer?.cancel();
 
-    if (focusedSeconds == 0) return;
+    if (focusedSeconds == 0) {
+      return;
+    }
+
+    final sessionProvider = context.read<StudySessionProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final strings = AppStrings.of(context);
 
     final draft = await _showSessionNameDialog();
-    if (draft == null) return;
+    if (draft == null) {
+      return;
+    }
+
+    if (!context.mounted) {
+      return;
+    }
 
     final session = FocusSession(
       title: draft.title,
@@ -106,13 +120,13 @@ class _TimerViewState extends State<TimerView> {
       type: draft.type,
     );
 
-    await context.read<StudySessionProvider>().addSession(session);
+    await sessionProvider.addSession(session);
 
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppStrings.of(context).sessionSaved)),
-    );
+    messenger.showSnackBar(SnackBar(content: Text(strings.sessionSaved)));
 
     widget.onSaved?.call();
   }
@@ -122,7 +136,7 @@ class _TimerViewState extends State<TimerView> {
     final controller = TextEditingController(
       text: widget.task?.title ?? s.focusSession,
     );
-    TaskType selectedType = widget.task?.type ?? TaskType.study;
+    var selectedType = widget.task?.type ?? TaskType.study;
 
     final result = await showDialog<_SessionSaveDraft>(
       context: context,
@@ -231,7 +245,8 @@ class _TimerViewState extends State<TimerView> {
               onPressed: () => Navigator.pop(context),
               style: TextButton.styleFrom(
                 foregroundColor: const Color(0xFF6B7280),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
               child: Text(
                 s.cancel,
@@ -253,7 +268,8 @@ class _TimerViewState extends State<TimerView> {
                 backgroundColor: AppTheme.primary,
                 foregroundColor: Colors.white,
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -275,8 +291,7 @@ class _TimerViewState extends State<TimerView> {
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
-    final isDark =
-        Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -297,20 +312,18 @@ class _TimerViewState extends State<TimerView> {
 
       body: Stack(
         children: [
-
           /// 🔵 มุมล่างซ้าย
           Positioned(
-            bottom: -120,
-            left: -120,
+            bottom: -130,
+            left: -130,
             child: ImageFiltered(
-              imageFilter:
-                  ImageFilter.blur(sigmaX: 120, sigmaY: 120),
+              imageFilter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
               child: Container(
-                width: 300,
-                height: 300,
+                width: 320,
+                height: 320,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                 color: Colors.blue.withOpacity(isDark ? 0.3 : 0.6),
+                  color: const Color(0xFF60A5FA).withValues(alpha: 0.32),
                 ),
               ),
             ),
@@ -318,18 +331,16 @@ class _TimerViewState extends State<TimerView> {
 
           /// 🟣 มุมบนขวา
           Positioned(
-            top: -150,
-            right: -150,
+            top: -130,
+            right: -130,
             child: ImageFiltered(
-              imageFilter:
-                  ImageFilter.blur(sigmaX: 120, sigmaY: 120),
+              imageFilter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
               child: Container(
-                width: 350,
-                height: 350,
+                width: 320,
+                height: 320,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: const Color(0xFF8B5CF6)
-                      .withOpacity(isDark ? 0.3 : 0.6),
+                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.32),
                 ),
               ),
             ),
@@ -337,116 +348,118 @@ class _TimerViewState extends State<TimerView> {
 
           /// 📌 เนื้อหาหลัก
           SafeArea(
-            child: Center(
-              child: Column(
-                mainAxisAlignment:
-                    MainAxisAlignment.center,
-                children: [
-
-                  Text(
-                    s.focusTimer,
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: isDark
-                          ? Colors.white
-                          : Colors.black,
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  Text(
-                    s.pomodoroProtocol,
-                    style: TextStyle(
-                      color: isDark
-                          ? Colors.white70
-                          : Colors.grey,
-                    ),
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  /// 🔥 25 / 50 / Custom
-                  Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.center,
-                    children: [
-                      _timeButton(25),
-                      const SizedBox(width: 12),
-                      _timeButton(50),
-                      const SizedBox(width: 12),
-                      _customButton(),
-                    ],
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  /// ⏳ TIMER
-                  Stack(
-                    alignment: Alignment.center,
-                    clipBehavior: Clip.none,
-                    children: [
-                      Positioned(
-                        top: -18,
-                        child: _progressBadge(isDark),
-                      ),
-                      TweenAnimationBuilder<double>(
-                        tween: Tween<double>(
-                          begin: 0,
-                          end: totalTime == 0
-                              ? 0
-                              : time / totalTime,
-                        ),
-                        duration: const Duration(milliseconds: 700),
-                        curve: Curves.easeOut,
-                        builder: (context, progress, _) {
-                          return SizedBox(
-                            width: 260,
-                            height: 260,
-                            child: CustomPaint(
-                              painter: _TimerRingPainter(
-                                progress: progress,
-                                isDark: isDark,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      Text(
-                        _formatClock(time),
-                        style: TextStyle(
-                          fontSize: 48,
-                          fontWeight: FontWeight.w900,
-                          color: isDark
-                              ? Colors.white
-                              : Colors.black,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  /// 🔥 RESET / PLAY / SAVE
-                  SizedBox(
-                    width: 280,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                padding: const EdgeInsets.fromLTRB(0, 24, 0, 160),
+                child: ConstrainedBox(
+                  constraints:
+                      BoxConstraints(minHeight: constraints.maxHeight - 184),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _sideActionButton(
-                          icon: Icons.rotate_left,
-                          onPressed: resetTimer,
+                        Text(
+                          s.focusTimer,
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black,
+                          ),
                         ),
-                        _primaryActionButton(),
-                        _sideActionButton(
-                          icon: Icons.save,
-                          onPressed: saveTimer,
+
+                        const SizedBox(height: 8),
+
+                        Text(
+                          s.pomodoroProtocol,
+                          style: TextStyle(
+                            color: isDark ? Colors.white70 : Colors.grey,
+                          ),
+                        ),
+
+                        const SizedBox(height: 30),
+
+                        /// 🔥 25 / 50 / Custom
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _timeButton(25),
+                            const SizedBox(width: 12),
+                            _timeButton(50),
+                            const SizedBox(width: 12),
+                            _customButton(),
+                          ],
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        /// ⏳ TIMER
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Stack(
+                              alignment: Alignment.center,
+                              clipBehavior: Clip.none,
+                              children: [
+                                TweenAnimationBuilder<double>(
+                                  tween: Tween<double>(
+                                    begin: 0,
+                                    end: totalTime == 0 ? 0 : time / totalTime,
+                                  ),
+                                  duration: const Duration(milliseconds: 700),
+                                  curve: Curves.easeOut,
+                                  builder: (context, progress, _) => SizedBox(
+                                    width: 260,
+                                    height: 260,
+                                    child: CustomPaint(
+                                      painter: _TimerRingPainter(
+                                        progress: progress,
+                                        isDark: isDark,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  _formatClock(time),
+                                  style: TextStyle(
+                                    fontSize: 44,
+                                    fontWeight: FontWeight.w900,
+                                    color: isDark ? Colors.white : Colors.black,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            _progressBadge(isDark),
+                          ],
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        /// 🔥 RESET / PLAY / SAVE
+                        SizedBox(
+                          width: 280,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _sideActionButton(
+                                icon: Icons.rotate_left,
+                                onPressed: resetTimer,
+                              ),
+                              _primaryActionButton(),
+                              _sideActionButton(
+                                icon: Icons.save,
+                                onPressed: saveTimer,
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -455,32 +468,86 @@ class _TimerViewState extends State<TimerView> {
     );
   }
 
-  Widget _timeButton(int minutes) {
-    return ElevatedButton(
-      onPressed: () => setNewTime(minutes),
-      child: Text("$minutes"),
-    );
-  }
+  Widget _timeButton(int minutes) => _durationButton(
+        label: '$minutes',
+        onTap: () => setNewTime(minutes),
+        isActive: selectedMinutes == minutes,
+      );
 
-  Widget _customButton() {
-    return ElevatedButton(
-      onPressed: () async {
-        final seconds = await showRollerDurationPicker(
-          context: context,
-          initialTotalSeconds: totalTime,
-        );
+  Widget _customButton() => _durationButton(
+        label: AppStrings.of(context).custom,
+        onTap: () async {
+          final seconds = await showRollerDurationPicker(
+            context: context,
+            initialTotalSeconds: totalTime,
+          );
 
-        if (seconds != null && seconds > 0) {
-          setState(() {
-            selectedMinutes = seconds ~/ 60;
-            totalTime = seconds;
-            time = totalTime;
-            focusedSeconds = 0;
-            running = false;
-          });
-        }
-      },
-      child: Text(AppStrings.of(context).custom),
+          if (seconds != null && seconds > 0) {
+            setState(() {
+              selectedMinutes = seconds ~/ 60;
+              totalTime = seconds;
+              time = totalTime;
+              focusedSeconds = 0;
+              running = false;
+            });
+          }
+        },
+        isActive: selectedMinutes != 25 && selectedMinutes != 50,
+      );
+
+  Widget _durationButton({
+    required String label,
+    required VoidCallback onTap,
+    required bool isActive,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isActive
+        ? <Color>[const Color(0xFFA78BFA), const Color(0xFF7C3AED)]
+        : <Color>[const Color(0xFFC4B5FD), const Color(0xFF8B5CF6)];
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color:
+                const Color(0xFF7C3AED).withValues(alpha: isDark ? 0.36 : 0.24),
+            blurRadius: 18,
+            spreadRadius: -3,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        shape: const StadiumBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: colors,
+            ),
+          ),
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const StadiumBorder(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -538,41 +605,75 @@ class _TimerViewState extends State<TimerView> {
     required IconData icon,
     required VoidCallback onPressed,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isReset = icon == Icons.rotate_left;
+    final isSave = icon == Icons.save;
+
+    final colors = isReset
+        ? <Color>[const Color(0xFF93C5FD), const Color(0xFF60A5FA)]
+        : isSave
+            ? <Color>[const Color(0xFF86EFAC), const Color(0xFF34D399)]
+            : <Color>[const Color(0xFFC4B5FD), AppTheme.primary];
+
+    final iconColor = isDark ? Colors.white : const Color(0xFFF8FAFC);
+
     return SizedBox(
       width: 56,
       height: 56,
-      child: IconButton.filled(
-        onPressed: onPressed,
-        icon: Icon(icon),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: colors,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: colors.last.withValues(alpha: isDark ? 0.28 : 0.18),
+              blurRadius: 10,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onPressed,
+            child: Center(
+              child: Icon(icon, color: iconColor),
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _primaryActionButton() {
-    return GestureDetector(
-      onTap: toggle,
-      child: Container(
-        width: 90,
-        height: 90,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: AppTheme.primary,
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.primary.withValues(alpha: 0.45),
-              blurRadius: 18,
-              spreadRadius: 1,
-            ),
-          ],
+  Widget _primaryActionButton() => GestureDetector(
+        onTap: toggle,
+        child: Container(
+          width: 90,
+          height: 90,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppTheme.primary,
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.primary.withValues(alpha: 0.45),
+                blurRadius: 18,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: Icon(
+            running ? Icons.pause : Icons.play_arrow,
+            color: Colors.white,
+            size: 48,
+          ),
         ),
-        child: Icon(
-          running ? Icons.pause : Icons.play_arrow,
-          color: Colors.white,
-          size: 48,
-        ),
-      ),
-    );
-  }
+      );
 
   String _taskTypeLabel(TaskType type, AppStrings s) {
     switch (type) {
@@ -617,7 +718,10 @@ class _TimerRingPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final minSide = math.min(size.width, size.height);
     // Leave room so glow/round caps are not clipped at ring edges.
-    final radius = (minSide / 2) - ((strokeWidth + glowExtra) / 2) - (blurSigma / 2) - edgePadding;
+    final radius = (minSide / 2) -
+        ((strokeWidth + glowExtra) / 2) -
+        (blurSigma / 2) -
+        edgePadding;
     final rect = Rect.fromCircle(center: center, radius: radius);
 
     final trackPaint = Paint()
@@ -630,11 +734,13 @@ class _TimerRingPainter extends CustomPainter {
 
     canvas.drawCircle(center, radius, trackPaint);
 
-    final sweep = (2 * math.pi * progress.clamp(0.0, 1.0));
-    if (sweep <= 0) return;
+    final sweep = 2 * math.pi * progress.clamp(0.0, 1.0);
+    if (sweep <= 0) {
+      return;
+    }
 
-    final gradientShader = SweepGradient(
-      colors: const [
+    final gradientShader = const SweepGradient(
+      colors: [
         Color(0xFFF5E9FF),
         Color(0xFFE9D5FF),
         Color(0xFFD8B4FE),
@@ -642,7 +748,7 @@ class _TimerRingPainter extends CustomPainter {
         Color(0xFFA78BFA),
         AppTheme.primary,
       ],
-      stops: const [0.0, 0.18, 0.36, 0.58, 0.78, 1.0],
+      stops: [0.0, 0.18, 0.36, 0.58, 0.78, 1.0],
       transform: GradientRotation(-math.pi / 2),
     ).createShader(rect);
 
@@ -660,8 +766,9 @@ class _TimerRingPainter extends CustomPainter {
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
 
-    canvas.drawArc(rect, -math.pi / 2, sweep, false, glowPaint);
-    canvas.drawArc(rect, -math.pi / 2, sweep, false, arcPaint);
+    canvas
+      ..drawArc(rect, -math.pi / 2, sweep, false, glowPaint)
+      ..drawArc(rect, -math.pi / 2, sweep, false, arcPaint);
 
     final endAngle = -math.pi / 2 + sweep;
     final knobCenter = Offset(
@@ -673,8 +780,6 @@ class _TimerRingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _TimerRingPainter oldDelegate) {
-    return oldDelegate.progress != progress ||
-        oldDelegate.isDark != isDark;
-  }
+  bool shouldRepaint(covariant _TimerRingPainter oldDelegate) =>
+      oldDelegate.progress != progress || oldDelegate.isDark != isDark;
 }

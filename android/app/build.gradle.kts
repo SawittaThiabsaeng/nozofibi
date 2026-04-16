@@ -21,11 +21,14 @@ android {
         signingConfigs {
             create("release") {
                 val storeFilePath = keystoreProperties.getProperty("storeFile")
+                val envStorePassword = System.getenv("NOZOFIBI_STORE_PASSWORD")
+                val envKeyPassword = System.getenv("NOZOFIBI_KEY_PASSWORD")
+                val envKeyAlias = System.getenv("NOZOFIBI_KEY_ALIAS")
                 if (!storeFilePath.isNullOrEmpty()) {
                     storeFile = file(storeFilePath)
-                    storePassword = keystoreProperties.getProperty("storePassword")
-                    keyAlias = keystoreProperties.getProperty("keyAlias")
-                    keyPassword = keystoreProperties.getProperty("keyPassword")
+                    storePassword = envStorePassword ?: keystoreProperties.getProperty("storePassword")
+                    keyAlias = envKeyAlias ?: keystoreProperties.getProperty("keyAlias")
+                    keyPassword = envKeyPassword ?: keystoreProperties.getProperty("keyPassword")
                 }
             }
         }
@@ -76,6 +79,33 @@ if (isReleaseTask && !rootProject.file("key.properties").exists()) {
     throw GradleException(
         "Missing android/key.properties for release signing. Copy android/key.properties.example and fill real values."
     )
+}
+
+if (isReleaseTask) {
+    val missingEnvSecrets =
+        System.getenv("NOZOFIBI_STORE_PASSWORD").isNullOrBlank() ||
+        System.getenv("NOZOFIBI_KEY_PASSWORD").isNullOrBlank()
+    if (missingEnvSecrets) {
+        throw GradleException(
+            "Missing NOZOFIBI_STORE_PASSWORD / NOZOFIBI_KEY_PASSWORD environment variables for release signing. Load secrets first."
+        )
+    }
+}
+
+if (isReleaseTask) {
+    val keyProps = Properties().apply {
+        rootProject.file("key.properties").inputStream().use { load(it) }
+    }
+    val releaseStoreFile = keyProps.getProperty("storeFile") ?: ""
+    val releaseAlias = keyProps.getProperty("keyAlias") ?: ""
+    if (
+        releaseStoreFile.contains("debug.keystore", ignoreCase = true) ||
+        releaseAlias.equals("androiddebugkey", ignoreCase = true)
+    ) {
+        throw GradleException(
+            "Release build is using debug keystore. Configure a real upload/release keystore in android/key.properties before Play Store upload."
+        )
+    }
 }
 
 flutter {

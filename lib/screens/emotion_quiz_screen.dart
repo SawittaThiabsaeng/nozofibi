@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../features/emotion_quiz/mood_logic.dart';
 import '../data/emotion_checkin_storage.dart';
 import 'emotion_result_screen.dart';
 
@@ -12,114 +11,237 @@ class EmotionQuizScreen extends StatefulWidget {
 
 class _EmotionQuizScreenState extends State<EmotionQuizScreen> {
   int _currentStep = 0;
-  String _focus = '';
-  String _energy = '';
-  String _feeling = '';
-  String _motivation = '';
-  String _session = '';
+  final Map<String, int> _moodScores = <String, int>{};
+  final List<List<String>> _selectedMoodGroups = <List<String>>[];
 
   final List<Map<String, dynamic>> _questions = [
     {
-      'title': 'Focus Level',
-      'options': ['high', 'medium', 'low'],
+      'titleTh': 'ช่วงนี้เวลาคุณตื่นขึ้นมา ความรู้สึกแรกที่เข้ามาในใจคือแบบไหน?',
+      'titleEn': 'When you wake up these days, what is the first feeling that comes to mind?',
+      'options': [
+        {
+          'key': 'A',
+          'labelTh': 'มีบางอย่างให้รออยู่ข้างหน้า',
+          'labelEn': 'There is something ahead that I look forward to',
+          'moods': ['Excited', 'Motivated'],
+        },
+        {
+          'key': 'B',
+          'labelTh': 'พร้อมจะจัดการสิ่งต่าง ๆ ทีละอย่าง',
+          'labelEn': 'Ready to handle things one by one',
+          'moods': ['Focused'],
+        },
+        {
+          'key': 'C',
+          'labelTh': 'เฉย ๆ อีกวันหนึ่ง',
+          'labelEn': 'Just another day',
+          'moods': ['Neutral'],
+        },
+        {
+          'key': 'D',
+          'labelTh': 'ยังอยากนอนต่ออีกหน่อย',
+          'labelEn': 'Still want to sleep a little longer',
+          'moods': ['Sleepy'],
+        },
+      ],
     },
     {
-      'title': 'Energy Level',
-      'options': ['high', 'medium', 'low'],
+      'titleTh': 'ถ้าวันนี้มีเรื่องไม่เป็นไปตามแผน คุณมักจะรู้สึกยังไงกับมัน?',
+      'titleEn': 'If something does not go as planned today, how do you usually feel about it?',
+      'options': [
+        {
+          'key': 'A',
+          'labelTh': 'มันก็แค่เรื่องหนึ่ง เดี๋ยวก็ผ่านไป',
+          'labelEn': 'It is just one thing, it will pass',
+          'moods': ['Calm'],
+        },
+        {
+          'key': 'B',
+          'labelTh': 'พยายามแก้ให้ดีที่สุด',
+          'labelEn': 'I try my best to fix it',
+          'moods': ['Trying', 'Motivated'],
+        },
+        {
+          'key': 'C',
+          'labelTh': 'รู้สึกว่ามันเริ่มหนักขึ้นเรื่อย ๆ',
+          'labelEn': 'It starts to feel heavier and heavier',
+          'moods': ['Calm', 'Sleepy'],
+        },
+        {
+          'key': 'D',
+          'labelTh': 'แอบรู้สึกแย่กับตัวเองนิด ๆ',
+          'labelEn': 'I quietly feel a bit bad about myself',
+          'moods': ['Sad'],
+        },
+      ],
     },
     {
-      'title': 'How are you feeling?',
-      'options': ['calm', 'happy', 'stressed', 'bored', 'sleepy', 'love'],
+      'titleTh': 'เวลาที่คุณอยู่คนเดียวเงียบ ๆ คุณมักจะ…',
+      'titleEn': 'When you are alone in quiet moments, you usually...',
+      'options': [
+        {
+          'key': 'A',
+          'labelTh': 'คิดถึงเรื่องดี ๆ หรือคนสำคัญ',
+          'labelEn': 'Think about good moments or important people',
+          'moods': ['Love', 'Happy'],
+        },
+        {
+          'key': 'B',
+          'labelTh': 'ปล่อยใจนิ่ง ๆ ไม่คิดอะไรมาก',
+          'labelEn': 'Let your mind rest without thinking too much',
+          'moods': ['Calm', 'Sleepy'],
+        },
+        {
+          'key': 'C',
+          'labelTh': 'เลื่อนอะไรไปเรื่อย ๆ',
+          'labelEn': 'Scroll through things endlessly',
+          'moods': ['Bored'],
+        },
+        {
+          'key': 'D',
+          'labelTh': 'คิดวนไปมา',
+          'labelEn': 'Overthink in loops',
+          'moods': ['Stressed', 'Sad'],
+        },
+      ],
     },
     {
-      'title': 'Motivation Level',
-      'options': ['high', 'medium', 'low'],
+      'titleTh': 'เวลาคุณอยากทำอะไรสักอย่าง คุณมักจะ…',
+      'titleEn': 'When you want to do something, you usually...',
+      'options': [
+        {
+          'key': 'A',
+          'labelTh': 'ลงมือทำทันที',
+          'labelEn': 'Start doing it right away',
+          'moods': ['Excited'],
+        },
+        {
+          'key': 'B',
+          'labelTh': 'วางแผนก่อนแล้วค่อยทำ',
+          'labelEn': 'Plan first, then do it',
+          'moods': ['Focused'],
+        },
+        {
+          'key': 'C',
+          'labelTh': 'ลองดูเท่าที่ไหว',
+          'labelEn': 'Try as much as I can',
+          'moods': ['Trying'],
+        },
+        {
+          'key': 'D',
+          'labelTh': 'รู้สึกว่าเริ่มยากตั้งแต่ยังไม่เริ่ม',
+          'labelEn': 'It already feels hard before starting',
+          'moods': ['Stressed'],
+        },
+      ],
     },
     {
-      'title': 'Session Experience',
-      'options': ['smooth', 'difficult', 'distracted'],
+      'titleTh': 'ช่วงนี้ชีวิตของคุณให้ความรู้สึกแบบไหนมากที่สุด?',
+      'titleEn': 'What feeling describes your life most these days?',
+      'options': [
+        {
+          'key': 'A',
+          'labelTh': 'กำลังไปข้างหน้า',
+          'labelEn': 'Moving forward',
+          'moods': ['Motivated'],
+        },
+        {
+          'key': 'B',
+          'labelTh': 'ไหลไปเรื่อย ๆ',
+          'labelEn': 'Just flowing along',
+          'moods': ['Neutral', 'Calm'],
+        },
+        {
+          'key': 'C',
+          'labelTh': 'เหมือนติดอยู่กับที่',
+          'labelEn': 'Feeling stuck in place',
+          'moods': ['Bored'],
+        },
+        {
+          'key': 'D',
+          'labelTh': 'เหมือนต้องแบกอะไรบางอย่าง',
+          'labelEn': 'Like carrying something heavy',
+          'moods': ['Sad', 'Stressed'],
+        },
+      ],
+    },
+    {
+      'titleTh': 'เวลามีช่วงเวลาน่ารักเล็ก ๆ เกิดขึ้น คุณมักจะ…',
+      'titleEn': 'When a small lovely moment happens, you usually...',
+      'options': [
+        {
+          'key': 'A',
+          'labelTh': 'ยิ้มออกมาโดยไม่รู้ตัว',
+          'labelEn': 'Smile without realizing it',
+          'moods': ['Happy'],
+        },
+        {
+          'key': 'B',
+          'labelTh': 'อยากแบ่งปันให้ใครสักคน',
+          'labelEn': 'Want to share it with someone',
+          'moods': ['Love'],
+        },
+        {
+          'key': 'C',
+          'labelTh': 'รับรู้มันแล้วก็ผ่านไป',
+          'labelEn': 'Notice it and move on',
+          'moods': ['Sleepy', 'Calm'],
+        },
+        {
+          'key': 'D',
+          'labelTh': 'แทบไม่ได้สังเกตมันเลย',
+          'labelEn': 'Barely notice it',
+          'moods': ['Bored', 'Sad'],
+        },
+      ],
     },
   ];
 
   String _questionTitleForStep(int step, bool isThai) {
-    switch (step) {
-      case 0:
-        return isThai ? 'ระดับสมาธิ' : 'Focus Level';
-      case 1:
-        return isThai ? 'ระดับพลังงาน' : 'Energy Level';
-      case 2:
-        return isThai ? 'ตอนนี้คุณรู้สึกอย่างไร?' : 'How are you feeling?';
-      case 3:
-        return isThai ? 'ระดับแรงจูงใจ' : 'Motivation Level';
-      case 4:
-        return isThai ? 'ประสบการณ์ระหว่างทำงาน' : 'Session Experience';
-      default:
-        return '';
+    final q = _questions[step];
+    return isThai ? q['titleTh'] as String : q['titleEn'] as String;
+  }
+
+  void _addMoodScores(List<String> moods) {
+    for (final mood in moods) {
+      _moodScores.update(mood, (value) => value + 1, ifAbsent: () => 1);
     }
   }
 
-  String _optionLabel(String value, bool isThai) {
-    if (!isThai) {
-      return value;
+  String _resolveMood() {
+    if (_moodScores.isEmpty) {
+      return 'Calm';
     }
 
-    switch (value) {
-      case 'high':
-        return 'สูง';
-      case 'medium':
-        return 'ปานกลาง';
-      case 'low':
-        return 'ต่ำ';
-      case 'calm':
-        return 'สงบ';
-      case 'happy':
-        return 'มีความสุข';
-      case 'stressed':
-        return 'เครียด';
-      case 'bored':
-        return 'เบื่อ';
-      case 'sleepy':
-        return 'ง่วง';
-      case 'love':
-        return 'อบอุ่นใจ';
-      case 'smooth':
-        return 'ราบรื่น';
-      case 'difficult':
-        return 'ค่อนข้างยาก';
-      case 'distracted':
-        return 'วอกแวก';
-      default:
-        return value;
+    final maxScore = _moodScores.values.reduce((a, b) => a > b ? a : b);
+    final topMoods = _moodScores.entries
+        .where((entry) => entry.value == maxScore)
+        .map((entry) => entry.key)
+        .toSet();
+
+    for (final selectedGroup in _selectedMoodGroups.reversed) {
+      for (final mood in selectedGroup) {
+        if (topMoods.contains(mood)) {
+          return mood;
+        }
+      }
     }
+
+    return topMoods.first;
   }
 
-  Future<void> _next(String value) async {
-    if (_currentStep == 0) {
-      _focus = value;
-    } else if (_currentStep == 1) {
-      _energy = value;
-    } else if (_currentStep == 2) {
-      _feeling = value;
-    } else if (_currentStep == 3) {
-      _motivation = value;
-    } else if (_currentStep == 4) {
-      _session = value;
-    }
+  Future<void> _next(List<String> moods) async {
+    _selectedMoodGroups.add(moods);
+    _addMoodScores(moods);
 
-    if (_currentStep < 4) {
+    if (_currentStep < _questions.length - 1) {
       setState(() {
         _currentStep++;
       });
       return;
     }
 
-    final mood = getMood(
-      _focus,
-      _energy,
-      _feeling,
-      _motivation,
-      _session,
-    );
+    final mood = _resolveMood();
 
     await EmotionCheckinStorage.addCheckin(mood: mood);
 
@@ -150,7 +272,12 @@ class _EmotionQuizScreenState extends State<EmotionQuizScreen> {
     }
   }
 
-  Widget _buildOption(String text, VoidCallback onTap, Color accentColor) {
+  Widget _buildOption({
+    required String keyLabel,
+    required String text,
+    required VoidCallback onTap,
+    required Color accentColor,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -182,6 +309,7 @@ class _EmotionQuizScreenState extends State<EmotionQuizScreen> {
               ],
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
@@ -189,17 +317,27 @@ class _EmotionQuizScreenState extends State<EmotionQuizScreen> {
                     color: accentColor.withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.bolt, color: accentColor),
+                  child: Text(
+                    keyLabel,
+                    style: TextStyle(
+                      color: accentColor,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 16),
-                Text(
-                  text,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : const Color(0xFF111827),
-                    fontSize: 18,
+                Expanded(
+                  child: Text(
+                    text,
+                    softWrap: true,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : const Color(0xFF111827),
+                      fontSize: 18,
+                    ),
                   ),
-                )
+                ),
               ],
             ),
           ),
@@ -242,8 +380,8 @@ class _EmotionQuizScreenState extends State<EmotionQuizScreen> {
             children: [
               Text(
                 isThai
-                    ? 'ขั้นตอนที่ ${_currentStep + 1} จาก 5'
-                    : 'Step ${_currentStep + 1} of 5',
+                  ? 'ข้อที่ ${_currentStep + 1} จาก ${_questions.length}'
+                  : 'Question ${_currentStep + 1} of ${_questions.length}',
                 style: TextStyle(
                   color: accentColor,
                   fontWeight: FontWeight.w800,
@@ -253,7 +391,7 @@ class _EmotionQuizScreenState extends State<EmotionQuizScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: LinearProgressIndicator(
-                  value: (_currentStep + 1) / 5,
+                  value: (_currentStep + 1) / _questions.length,
                   minHeight: 8,
                   backgroundColor: isDark
                       ? const Color(0xFF334155)
@@ -273,13 +411,12 @@ class _EmotionQuizScreenState extends State<EmotionQuizScreen> {
               const SizedBox(height: 34),
               Expanded(
                 child: ListView(
-                  children: (q['options'] as List<String>).map<Widget>((opt) {
-                    return _buildOption(
-                      _optionLabel(opt, isThai),
-                      () => _next(opt),
-                      accentColor,
-                    );
-                  }).toList(),
+                  children: (q['options'] as List<Map<String, dynamic>>).map<Widget>((opt) => _buildOption(
+                      keyLabel: opt['key'] as String,
+                      text: isThai ? opt['labelTh'] as String : opt['labelEn'] as String,
+                      onTap: () => _next(List<String>.from(opt['moods'] as List<dynamic>)),
+                      accentColor: accentColor,
+                    )).toList(),
                 ),
               ),
             ],

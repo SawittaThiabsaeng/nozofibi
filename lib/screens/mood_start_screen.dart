@@ -14,12 +14,14 @@ class MoodStartScreen extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF7F2FF),
+      backgroundColor:
+          isDark ? const Color(0xFF0F172A) : const Color(0xFFF7F2FF),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : const Color(0xFF1F2937)),
+          icon: Icon(Icons.arrow_back,
+              color: isDark ? Colors.white : const Color(0xFF1F2937)),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -53,7 +55,9 @@ class MoodStartScreen extends StatelessWidget {
                   color: isDark ? const Color(0xFF1F2937) : Colors.white,
                   borderRadius: BorderRadius.circular(30),
                   border: Border.all(
-                    color: isDark ? const Color(0xFF374151) : const Color(0xFFEDE9FE),
+                    color: isDark
+                        ? const Color(0xFF374151)
+                        : const Color(0xFFEDE9FE),
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -74,11 +78,14 @@ class MoodStartScreen extends StatelessWidget {
                         ),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Icon(Icons.favorite, color: Colors.white, size: 32),
+                      child: const Icon(Icons.favorite,
+                          color: Colors.white, size: 32),
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      isThai ? 'วันนี้คุณรู้สึกยังไงบ้าง?' : 'How are you, really?',
+                      isThai
+                          ? 'วันนี้คุณรู้สึกยังไงบ้าง?'
+                          : 'How are you, really?',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -93,7 +100,8 @@ class MoodStartScreen extends StatelessWidget {
                           : 'Take a quick 5-question quiz to discover your current emotional state.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                        color:
+                            isDark ? Colors.white70 : const Color(0xFF64748B),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -130,7 +138,8 @@ class MoodStartScreen extends StatelessWidget {
                               fontSize: 18,
                             ),
                           ),
-                          child: Text(isThai ? 'เริ่มแบบทดสอบ →' : 'Start Quiz →'),
+                          child:
+                              Text(isThai ? 'เริ่มแบบทดสอบ →' : 'Start Quiz →'),
                         ),
                       ),
                     ),

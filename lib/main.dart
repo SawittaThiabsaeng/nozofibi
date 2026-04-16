@@ -1,27 +1,34 @@
+import 'dart:async';
+
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'dart:async';
+
+import 'data/app_local_db.dart';
 import 'data/focus_storage.dart';
 import 'data/language_preference_storage.dart';
-import 'data/app_local_db.dart';
 import 'firebase_options.dart';
+import 'l10n/app_strings.dart';
+import 'providers/study_session_provider.dart';
+import 'providers/task_provider.dart';
+import 'screens/analytics_emotions_view.dart';
+import 'screens/analytics_view.dart';
+import 'screens/edit_profile_page.dart';
 import 'screens/home_view.dart';
 import 'screens/login_screen.dart';
-import 'screens/timer_view.dart';
-import 'screens/schedule_view.dart';
-import 'screens/analytics_view.dart';
-import 'screens/analytics_emotions_view.dart';
+import 'screens/nozofibi_splash_screen.dart';
 import 'screens/profile_view.dart';
-import 'screens/edit_profile_page.dart';
+import 'screens/schedule_view.dart';
 import 'screens/settings_view.dart';
-import 'providers/task_provider.dart';
-import 'providers/study_session_provider.dart';
-import 'l10n/app_strings.dart';
+import 'screens/timer_view.dart';
+import 'services/app_logger.dart';
+import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +36,7 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await _configureAppCheck();
 
   runApp(
     MultiProvider(
@@ -45,6 +53,27 @@ Future<void> main() async {
   );
 }
 
+Future<void> _configureAppCheck() async {
+  if (kIsWeb) {
+    const webSiteKey = String.fromEnvironment('FIREBASE_APP_CHECK_SITE_KEY');
+    if (webSiteKey.isEmpty) {
+      AppLogger.warn(
+          'Firebase App Check web site key missing; skipping web activation');
+      return;
+    }
+
+    await FirebaseAppCheck.instance.activate(
+      webProvider: ReCaptchaV3Provider(webSiteKey),
+    );
+    return;
+  }
+
+  await FirebaseAppCheck.instance.activate(
+    androidProvider:
+        kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+  );
+}
+
 class ProductivityApp extends StatefulWidget {
   const ProductivityApp({super.key});
 
@@ -55,6 +84,7 @@ class ProductivityApp extends StatefulWidget {
 class _ProductivityAppState extends State<ProductivityApp> {
   ThemeMode _themeMode = ThemeMode.light;
   late Locale _appLocale;
+  bool _showSplash = true;
 
   String _displayNameFromUser(User user) {
     final displayName = user.displayName?.trim();
@@ -72,9 +102,20 @@ class _ProductivityAppState extends State<ProductivityApp> {
   void initState() {
     super.initState();
     _appLocale = Locale(LanguagePreferenceStorage.getLanguage());
+    unawaited(_dismissSplashAfterDelay());
   }
 
-  void toggleTheme(bool isDark) {
+  Future<void> _dismissSplashAfterDelay() async {
+    await Future<void>.delayed(const Duration(milliseconds: 2500));
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _showSplash = false;
+    });
+  }
+
+  void toggleTheme({required bool isDark}) {
     setState(() {
       _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
     });
@@ -89,87 +130,61 @@ class _ProductivityAppState extends State<ProductivityApp> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      themeMode: _themeMode,
-      locale: _appLocale,
-      supportedLocales: const [
-        Locale('en'),
-        Locale('th'),
-      ],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
+  Widget build(BuildContext context) => MaterialApp(
+        debugShowCheckedModeBanner: false,
+        themeMode: _themeMode,
+        themeAnimationDuration: const Duration(milliseconds: 350),
+        themeAnimationCurve: Curves.easeInOutCubic,
+        locale: _appLocale,
+        supportedLocales: const [
+          Locale('en'),
+          Locale('th'),
+        ],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        theme: AppTheme.getTheme(isDarkMode: false),
+        darkTheme: AppTheme.getTheme(isDarkMode: true),
+        home: _showSplash
+            ? const NozofibiSplashScreen()
+            : StreamBuilder<User?>(
+                stream: FirebaseAuth.instance.userChanges(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    );
+                  }
 
-      /// 🌞 LIGHT THEME
-      theme: ThemeData(
-        brightness: Brightness.light,
-        fontFamily: 'PlusJakartaSans',
-        scaffoldBackgroundColor: const Color(0xFFF6F4FA),
-        cardColor: Colors.white,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF8B5CF6),
-          brightness: Brightness.light,
-        ),
-        snackBarTheme: const SnackBarThemeData(
-          behavior: SnackBarBehavior.floating,
-        ),
-      ),
+                  final user = snapshot.data;
+                  if (user == null) {
+                    return LoginScreen();
+                  }
 
-      /// 🌙 DARK THEME
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        fontFamily: 'PlusJakartaSans',
-        scaffoldBackgroundColor: const Color(0xFF0F172A),
-        cardColor: const Color(0xFF1E293B),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF8B5CF6),
-          brightness: Brightness.dark,
-        ),
-        snackBarTheme: const SnackBarThemeData(
-          behavior: SnackBarBehavior.floating,
-        ),
-      ),
-
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.userChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-
-          final user = snapshot.data;
-          if (user == null) {
-            return LoginScreen();
-          }
-
-          return MainNavigation(
-            userName: _displayNameFromUser(user),
-            onToggleDarkMode: toggleTheme,
-            onLanguageChanged: updateLanguage,
-          );
-        },
-      ),
-    );
-  }
+                  return MainNavigation(
+                    userName: _displayNameFromUser(user),
+                    onToggleDarkMode: (isDark) => toggleTheme(isDark: isDark),
+                    onLanguageChanged: updateLanguage,
+                  );
+                },
+              ),
+      );
 }
 
 class MainNavigation extends StatefulWidget {
-  final String userName;
-  final Function(bool) onToggleDarkMode;
-  final Function(String) onLanguageChanged;
-
   const MainNavigation({
-    super.key,
     required this.userName,
     required this.onToggleDarkMode,
     required this.onLanguageChanged,
+    super.key,
+    this.onSignOut,
   });
+  final String userName;
+  final ValueChanged<bool> onToggleDarkMode;
+  final Function(String) onLanguageChanged;
+  final Future<void> Function()? onSignOut;
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
@@ -188,8 +203,47 @@ class _MainNavigationState extends State<MainNavigation> {
       await FirebaseAuth.instance.signOut();
       await GoogleSignIn().signOut();
     } catch (e) {
-      debugPrint('Sign out failed: $e');
+      AppLogger.warn('Sign out failed');
     }
+  }
+
+  Future<void> _handleSignOut() async {
+    final confirmed = await _confirmSignOut();
+    if (!confirmed) {
+      return;
+    }
+
+    final customSignOut = widget.onSignOut;
+    if (customSignOut != null) {
+      await customSignOut();
+      return;
+    }
+    await _signOutAndReturnToAuthGate();
+  }
+
+  Future<bool> _confirmSignOut() async {
+    final s = AppStrings.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(s.signOut),
+        content: Text(s.pick('Are you sure you want to sign out?',
+            'คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ?')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(s.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(s.signOut),
+          ),
+        ],
+      ),
+    );
+
+    return confirmed == true;
   }
 
   @override
@@ -204,7 +258,8 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   void didUpdateWidget(covariant MainNavigation oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.userName != oldWidget.userName && widget.userName != _profileName) {
+    if (widget.userName != oldWidget.userName &&
+        widget.userName != _profileName) {
       setState(() {
         _profileName = widget.userName;
         _screenCache[0] = null;
@@ -233,7 +288,7 @@ class _MainNavigationState extends State<MainNavigation> {
       await user.updateDisplayName(nextName);
       await user.reload();
     } catch (e) {
-      debugPrint('Unable to update Firebase display name: $e');
+      AppLogger.warn('Unable to update Firebase display name');
     }
   }
 
@@ -304,7 +359,7 @@ class _MainNavigationState extends State<MainNavigation> {
           userName: _profileName,
           profileImage: _profileImage,
           onLogout: () {
-            unawaited(_signOutAndReturnToAuthGate());
+            unawaited(_handleSignOut());
           },
           onGoSettings: () {
             Navigator.push(
@@ -343,7 +398,8 @@ class _MainNavigationState extends State<MainNavigation> {
               final updatedName = (result['name'] as String? ?? '').trim();
               unawaited(_updateFirebaseDisplayName(updatedName));
               setState(() {
-                _profileName = updatedName.isNotEmpty ? updatedName : _profileName;
+                _profileName =
+                    updatedName.isNotEmpty ? updatedName : _profileName;
                 _profileImage = result['image'];
                 _screenCache[0] = null;
                 _screenCache[4] = null;
@@ -355,55 +411,51 @@ class _MainNavigationState extends State<MainNavigation> {
     }
   }
 
-  List<Widget> _buildIndexedChildren() {
-    return List<Widget>.generate(5, (index) {
-      final cached = _screenCache[index];
-      if (cached != null) {
-        return cached;
-      }
+  List<Widget> _buildIndexedChildren() => List<Widget>.generate(5, (index) {
+        final cached = _screenCache[index];
+        if (cached != null) {
+          return cached;
+        }
 
-      if (index != _currentIndex) {
-        return const SizedBox.shrink();
-      }
+        if (index != _currentIndex) {
+          return const SizedBox.shrink();
+        }
 
-      final screen = _buildScreen(index);
-      _screenCache[index] = screen;
-      return screen;
-    });
-  }
+        final screen = _buildScreen(index);
+        _screenCache[index] = screen;
+        return screen;
+      });
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Stack(
-        children: [
-          IndexedStack(
-            index: _currentIndex,
-            children: _buildIndexedChildren(),
-          ),
-          Positioned(
-            bottom: 30,
-            left: 20,
-            right: 20,
-            child: CustomNavBar(
-              currentIndex: _currentIndex,
-              onTap: (index) {
-                setState(() => _currentIndex = index);
-              },
+  Widget build(BuildContext context) => Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Stack(
+          children: [
+            IndexedStack(
+              index: _currentIndex,
+              children: _buildIndexedChildren(),
             ),
-          ),
-        ],
-      ),
-    );
-  }
+            Positioned(
+              bottom: 30,
+              left: 20,
+              right: 20,
+              child: CustomNavBar(
+                currentIndex: _currentIndex,
+                onTap: (index) {
+                  setState(() => _currentIndex = index);
+                },
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 class CustomNavBar extends StatelessWidget {
   const CustomNavBar({
-    super.key,
     required this.currentIndex,
     required this.onTap,
+    super.key,
   });
 
   final int currentIndex;
@@ -444,8 +496,9 @@ class CustomNavBar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: List.generate(items.length, (index) {
           final selected = currentIndex == index;
-          final activeColor = const Color(0xFF8B5CF6);
-          final inactiveColor = isDark ? const Color(0xFFCBD5E1) : const Color(0xFF64748B);
+          const activeColor = Color(0xFF8B5CF6);
+          final inactiveColor =
+              isDark ? const Color(0xFFCBD5E1) : const Color(0xFF64748B);
 
           return Expanded(
             child: InkWell(
@@ -475,7 +528,8 @@ class CustomNavBar extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 10,
-                        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight:
+                            selected ? FontWeight.w700 : FontWeight.w500,
                         color: selected ? activeColor : inactiveColor,
                       ),
                     ),

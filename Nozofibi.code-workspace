@@ -1,0 +1,13 @@
+{
+  "folders": [
+    {
+      "path": "C:/Users/LENOVO/Desktop/Nozofibi"
+    }
+  ],
+  "settings": {
+    "dart.flutterSdkPath": "C:/src/flutter",
+    "dart.analysisExcludedFolders": [
+      "build"
+    ]
+  }
+}

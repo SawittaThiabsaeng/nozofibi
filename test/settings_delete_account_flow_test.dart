@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:nozofibi/screens/settings_view.dart';
 
 void main() {
@@ -35,7 +35,7 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     await tester.tap(find.widgetWithText(ListTile, 'Delete Account'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('Delete Account'), findsNWidgets(2));
     expect(
@@ -44,7 +44,7 @@ void main() {
     );
 
     await tester.tap(find.widgetWithText(TextButton, 'Confirm'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(deleteCalled, isTrue);
   });
@@ -80,10 +80,10 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     await tester.tap(find.widgetWithText(ListTile, 'Delete Account'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
     await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(deleteCalled, isFalse);
     expect(find.byType(AlertDialog), findsNothing);

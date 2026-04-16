@@ -1,15 +1,21 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
-import '../models/focus_session.dart';
+
 import '../data/focus_storage.dart';
+import '../models/focus_session.dart';
 
 /// Manages study timer state and lifecycle.
-/// 
+///
 /// Consolidated from TimerView to enable:
 /// - Testable timer logic
 /// - State persistence across widget rebuilds
 /// - Coordinated save operations with SessionProvider
 class StudyTimerProvider extends ChangeNotifier {
+  StudyTimerProvider() {
+    setNewTime(25); // Initialize with default 25 minutes
+  }
+
   int _selectedMinutes = 25;
   late int _totalTime;
   late int _time;
@@ -23,10 +29,6 @@ class StudyTimerProvider extends ChangeNotifier {
   int get time => _time;
   int get focusedSeconds => _focusedSeconds;
   bool get running => _running;
-
-  StudyTimerProvider() {
-    setNewTime(25); // Initialize with default 25 minutes
-  }
 
   /// Start or pause the timer
   void toggle() {
@@ -81,7 +83,9 @@ class StudyTimerProvider extends ChangeNotifier {
   }) async {
     _timer?.cancel();
 
-    if (_focusedSeconds == 0) return null;
+    if (_focusedSeconds == 0) {
+      return null;
+    }
 
     final session = FocusSession(
       title: title,

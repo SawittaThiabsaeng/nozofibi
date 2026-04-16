@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
+
 import '../data/emotion_checkin_storage.dart';
 import '../features/emotion_quiz/mood_logic.dart';
 import '../providers/study_session_provider.dart';
 import '../theme/app_theme.dart';
-import '../widgets/soft_background.dart';
 import '../widgets/common_widgets.dart';
-import 'mood_start_screen.dart';
+import '../widgets/soft_background.dart';
 import 'mood_log_screen.dart';
+import 'mood_start_screen.dart';
 
 class AnalyticsEmotionsView extends StatefulWidget {
 	const AnalyticsEmotionsView({super.key});

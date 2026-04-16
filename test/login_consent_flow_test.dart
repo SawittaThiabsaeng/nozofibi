@@ -33,13 +33,14 @@ void main() {
       await AppLocalDb.resetForTesting();
     } catch (_) {}
     try {
-      if (await testHiveDir.exists()) {
-        await testHiveDir.delete(recursive: true);
+      if (testHiveDir.existsSync()) {
+        testHiveDir.deleteSync(recursive: true);
       }
     } catch (_) {}
   });
 
-  testWidgets('email login is blocked when consent is declined', (tester) async {
+  testWidgets('email login is blocked when consent is declined',
+      (tester) async {
     await tester.binding.setSurfaceSize(const Size(1200, 2200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -74,7 +75,8 @@ void main() {
     final signInButton = find.widgetWithText(ElevatedButton, 'Sign In');
     await tester.ensureVisible(signInButton);
     await tester.tap(signInButton);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
 
     expect(loginCalled, isFalse);
     expect(consentAcceptedCalled, isFalse);
@@ -89,7 +91,7 @@ void main() {
     final auth = await _buildAuth();
     var consentAcceptedCalled = false;
     var loginCalled = false;
-    var consentSavedBy = <String>[];
+    final consentSavedBy = <String>[];
 
     await tester.pumpWidget(
       MaterialApp(
@@ -120,12 +122,16 @@ void main() {
     final signInButton = find.widgetWithText(ElevatedButton, 'Sign In');
     await tester.ensureVisible(signInButton);
     await tester.tap(signInButton);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
 
     // Verify the DI pattern: callback was invoked instead of default behavior
-    expect(consentAcceptedCalled, isTrue, reason: 'Consent DI callback should have been invoked');
-    expect(consentSavedBy, contains('injected_callback'), reason: 'Consent should be saved via injected callback');
-    expect(loginCalled, isTrue, reason: 'Login should complete after consent accepted');
+    expect(consentAcceptedCalled, isTrue,
+        reason: 'Consent DI callback should have been invoked');
+    expect(consentSavedBy, contains('injected_callback'),
+        reason: 'Consent should be saved via injected callback');
+    expect(loginCalled, isTrue,
+        reason: 'Login should complete after consent accepted');
     expect(auth.currentUser, isNotNull, reason: 'User should be authenticated');
   });
 }

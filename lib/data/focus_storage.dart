@@ -151,11 +151,10 @@ class FocusStorage {
       final key = _currentUserKey();
       final box = Hive.box<String>(AppLocalDb.sessionsBox);
       final payload = box.get(key);
-      final sessions = payload == null || payload.isEmpty
+      final sessions = (payload == null || payload.isEmpty
           ? <FocusSession>[]
-          : _decodeSessions(payload);
-
-      sessions.add(session);
+          : _decodeSessions(payload))
+        ..add(session);
       final sanitized = _sanitizeAndSort(sessions);
       await box.put(key, _encodeSessions(sanitized));
     });

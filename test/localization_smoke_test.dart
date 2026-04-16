@@ -2,27 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nozofibi/l10n/app_strings.dart';
-import 'package:nozofibi/screens/schedule_view.dart';
-import 'package:nozofibi/screens/settings_view.dart';
 import 'package:nozofibi/providers/study_session_provider.dart';
 import 'package:nozofibi/screens/analytics_view.dart';
+import 'package:nozofibi/screens/schedule_view.dart';
+import 'package:nozofibi/screens/settings_view.dart';
 import 'package:provider/provider.dart';
 
 Widget _buildLocalizedApp({
   required Locale locale,
   required Widget child,
-}) {
-  return MaterialApp(
-    locale: locale,
-    supportedLocales: const [Locale('en'), Locale('th')],
-    localizationsDelegates: const [
-      GlobalMaterialLocalizations.delegate,
-      GlobalWidgetsLocalizations.delegate,
-      GlobalCupertinoLocalizations.delegate,
-    ],
-    home: child,
-  );
-}
+}) =>
+    MaterialApp(
+      locale: locale,
+      supportedLocales: const [Locale('en'), Locale('th')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      home: child,
+    );
 
 class _StringsProbe extends StatelessWidget {
   const _StringsProbe();
@@ -52,7 +51,7 @@ void main() {
       ),
     );
 
-    expect(find.text('ยินดีต้อนรับกลับ'), findsOneWidget);
+    expect(find.text('พร้อมโฟกัสไปด้วยกัน'), findsOneWidget);
     expect(find.text('การตั้งค่า'), findsOneWidget);
     expect(find.text('ยังไม่มีเซสชันที่บันทึก'), findsOneWidget);
   });

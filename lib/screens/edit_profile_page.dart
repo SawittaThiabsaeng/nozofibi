@@ -1,23 +1,23 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
+import 'package:image_picker/image_picker.dart';
+
+import '../data/profile_storage.dart';
+import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/soft_background.dart';
-import '../data/profile_storage.dart';
-import 'package:flutter/foundation.dart';
-import 'dart:io';
-import 'dart:typed_data';
-import '../l10n/app_strings.dart';
 
 class EditProfilePage extends StatefulWidget {
-  final String currentName;
-  final XFile? currentImage;
-
   const EditProfilePage({
-    super.key,
     required this.currentName,
+    super.key,
     this.currentImage,
   });
+  final String currentName;
+  final XFile? currentImage;
 
   @override
   State<EditProfilePage> createState() => _EditProfilePageState();
@@ -38,7 +38,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 95,
+      imageQuality: 100,
     );
 
     if (pickedFile == null) {
@@ -55,7 +55,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final cropped = await ImageCropper().cropImage(
       sourcePath: pickedFile.path,
       compressFormat: ImageCompressFormat.jpg,
-      compressQuality: 92,
+      compressQuality: 95,
       aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
       uiSettings: [
         AndroidUiSettings(
@@ -86,7 +86,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
   /// ✅ ตัวนี้สำคัญมาก
   Widget _buildProfileImage() {
     if (_image == null) {
-      return const Icon(Icons.person, size: 50);
+      return const Icon(
+        Icons.person,
+        size: 50,
+        color: AppTheme.primary,
+      );
     }
 
     // 🌐 WEB
@@ -124,8 +128,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
-    final isDark =
-        Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor:
@@ -149,96 +152,102 @@ class _EditProfilePageState extends State<EditProfilePage> {
       ),
       body: SoftBackground(
         child: Container(
-          decoration:
-              isDark ? AppTheme.darkGradient : null,
+          decoration: isDark ? AppTheme.darkGradient : null,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 100, 24, 24),
             child: Column(
               children: [
-
-              /// ✅ แก้ตรงนี้
-              CircleAvatar(
-                radius: 50,
-                backgroundColor:
-                    isDark ? Colors.white10 : Colors.white,
-                child: _buildProfileImage(),
-              ),
-
-              TextButton(
-                onPressed: _pickImage,
-                child: Text(s.changeProfilePicture),
-              ),
-
-              const SizedBox(height: 24),
-
-              TextField(
-                controller: nameController,
-                style: TextStyle(
-                  color:
-                      isDark ? Colors.white : AppTheme.textDark,
-                ),
-                decoration: InputDecoration(
-                  labelText: s.fullName,
-                  filled: true,
-                  fillColor: isDark
-                      ? AppTheme.inputDark
-                      : AppTheme.inputLight,
-                  border: OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(12),
+                /// ✅ แก้ตรงนี้
+                Container(
+                  width: 104,
+                  height: 104,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isDark
+                          ? const Color(0xFF334155)
+                          : const Color(0xFFCBD5E1),
+                      width: 1.5,
                     ),
                   ),
-                  onPressed: () async {
-                    // Save image to persistent storage if changed
-                    if (_image != null) {
-                      try {
-                        final imageBytes = await _image!.readAsBytes();
-                        await ProfileStorage.saveProfileImage(
-                          imageBytes,
-                          displayName: nameController.text.trim(),
-                        );
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(s.errorSavingProfile('$e'))),
+                  child: CircleAvatar(
+                    radius: 50,
+                    backgroundColor: isDark ? Colors.white10 : Colors.white,
+                    child: _buildProfileImage(),
+                  ),
+                ),
+
+                TextButton(
+                  onPressed: _pickImage,
+                  child: Text(s.changeProfilePicture),
+                ),
+
+                const SizedBox(height: 24),
+
+                TextField(
+                  controller: nameController,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : AppTheme.textDark,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: s.fullName,
+                    filled: true,
+                    fillColor:
+                        isDark ? AppTheme.inputDark : AppTheme.inputLight,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () async {
+                      // Save image to persistent storage if changed
+                      if (_image != null) {
+                        try {
+                          final imageBytes = await _image!.readAsBytes();
+                          await ProfileStorage.saveProfileImage(
+                            imageBytes,
+                            displayName: nameController.text.trim(),
                           );
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content: Text(s.errorSavingProfile('$e'))),
+                            );
+                          }
+                          return;
                         }
-                        return;
                       }
-                    }
-                    
-                    if (context.mounted) {
-                      Navigator.pop(context, {
-                        "name": nameController.text,
-                        "image": _image,
-                      });
-                    }
-                  },
-                  child: Text(
-                    s.saveChanges,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+
+                      if (context.mounted) {
+                        Navigator.pop(context, {
+                          'name': nameController.text,
+                          'image': _image,
+                        });
+                      }
+                    },
+                    child: Text(
+                      s.saveChanges,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
-              ),
               ],
             ),
           ),

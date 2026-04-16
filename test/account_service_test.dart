@@ -1,6 +1,5 @@
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nozofibi/data/account_service.dart';
@@ -25,9 +24,7 @@ void main() {
     );
   });
 
-  tearDown(() {
-    AccountService.resetForTesting();
-  });
+  tearDown(AccountService.resetForTesting);
 
   group('AccountService.submitConsent', () {
     test('throws when user is not authenticated', () async {
@@ -64,6 +61,34 @@ void main() {
       expect(userDoc.exists, isTrue);
       expect(userDoc.data()?['consented'], true);
       expect(userDoc.data()?['consentVersion'], '1.2.3');
+      expect(userDoc.data()?['requiredConsentAccepted'], true);
+      expect(userDoc.data()?['marketingConsentOptIn'], false);
+    });
+
+    test('stores marketing opt-in when requested', () async {
+      final ok = await AccountService.submitConsent(
+        accepted: true,
+        customVersion: '2.0.0',
+        marketingOptIn: true,
+      );
+
+      expect(ok, isTrue);
+
+      final consentDocs = await firestore
+          .collection('users')
+          .doc('user-1')
+          .collection('consent')
+          .get();
+
+      expect(consentDocs.docs.length, 1);
+      final data = consentDocs.docs.first.data();
+      expect(data['requiredConsentAccepted'], true);
+      expect(data['marketingConsentOptIn'], true);
+
+      final userDoc = await firestore.collection('users').doc('user-1').get();
+      final userData = userDoc.data();
+      expect(userData?['requiredConsentAccepted'], true);
+      expect(userData?['marketingConsentOptIn'], true);
     });
   });
 
@@ -93,7 +118,7 @@ void main() {
   });
 
   group('AccountService.deleteAccount', () {
-    test('removes user document and user-owned subcollections', () async {
+    test('anonymizes user document and removes user-owned subcollections', () async {
       final userDoc = firestore.collection('users').doc('user-1');
 
       await userDoc.set({'name': 'User One'});
@@ -112,8 +137,13 @@ void main() {
 
       expect(ok, isTrue);
 
-      final deletedUser = await userDoc.get();
-      expect(deletedUser.exists, isFalse);
+      final anonymizedUser = await userDoc.get();
+      expect(anonymizedUser.exists, isTrue);
+      expect(anonymizedUser.data()?['isDeleted'], isTrue);
+      expect(anonymizedUser.data()?['deleteReason'], 'Test deletion');
+      expect(anonymizedUser.data()?['requiredConsentAccepted'], false);
+      expect(anonymizedUser.data()?['marketingConsentOptIn'], false);
+      expect(anonymizedUser.data()?['email'], startsWith('deleted_'));
 
       final sessionsAfter =
           await userDoc.collection('focus_sessions_v2').get();

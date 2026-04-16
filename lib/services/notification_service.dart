@@ -1,9 +1,10 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:intl/intl.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+
+import 'app_logger.dart';
 
 class NotificationService {
   NotificationService._();
@@ -46,7 +47,7 @@ class NotificationService {
       final timezoneName = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(timezoneName));
     } catch (e) {
-      debugPrint('Falling back to UTC timezone for notifications: $e');
+      AppLogger.warn('Falling back to UTC timezone for notifications: $e');
       tz.setLocalLocation(tz.UTC);
     }
 
@@ -292,7 +293,7 @@ class NotificationService {
   }
 
   static void logError(Object error, StackTrace stackTrace) {
-    debugPrint('Notification error: $error');
-    debugPrint('$stackTrace');
+    AppLogger.error('Notification error', error: error);
+    AppLogger.warn('$stackTrace');
   }
 }
