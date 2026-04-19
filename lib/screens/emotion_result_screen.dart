@@ -175,11 +175,9 @@ class _EmotionResultScreenState extends State<EmotionResultScreen> {
                                             height: moodVisualSize,
                                             fit: BoxFit.contain,
                                           )
-                                        : Text(
-                                            details.emoji,
-                                            style: TextStyle(
-                                              fontSize: moodVisualSize * 0.82,
-                                            ),
+                                        : SizedBox(
+                                            width: moodVisualSize,
+                                            height: moodVisualSize,
                                           ),
                                   ),
                                   const SizedBox(height: 24),

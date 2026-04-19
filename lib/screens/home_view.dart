@@ -43,6 +43,11 @@ class HomeView extends StatelessWidget {
   static List<EmotionCheckin>? _cachedCheckins;
   static DateTime? _lastCheckinFetch;
 
+  static void invalidateProfileImageCache() {
+    _cachedProfileImage = null;
+    _lastProfileImageFetch = null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context);

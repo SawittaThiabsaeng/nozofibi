@@ -9,6 +9,7 @@ class AppLocalDb {
   static const String sessionsBox = 'focus_sessions_secure_v1';
   static const String tasksBox = 'tasks_secure_v1';
   static const String privacyBox = 'privacy_secure_v1';
+  static const String profileBox = 'profile_secure_v1';
 
   @visibleForTesting
   static const String legacySessionsBox = 'focus_sessions';
@@ -68,6 +69,7 @@ class AppLocalDb {
     await Hive.openBox<String>(sessionsBox, encryptionCipher: cipher);
     await Hive.openBox<String>(tasksBox, encryptionCipher: cipher);
     await Hive.openBox<String>(privacyBox, encryptionCipher: cipher);
+    await Hive.openBox(profileBox, encryptionCipher: cipher);
   }
 
   @visibleForTesting

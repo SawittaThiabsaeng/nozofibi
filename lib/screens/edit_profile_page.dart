@@ -26,6 +26,10 @@ class EditProfilePage extends StatefulWidget {
 class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController nameController;
   XFile? _image;
+  Uint8List? _savedImageBytes;
+  bool _loadingSavedImage = true;
+  bool _imageChanged = false;
+  bool _isSaving = false;
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -33,12 +37,35 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.initState();
     nameController = TextEditingController(text: widget.currentName);
     _image = widget.currentImage;
+    _loadSavedImageFallback();
+  }
+
+  Future<void> _loadSavedImageFallback() async {
+    try {
+      final savedImage = await ProfileStorage.loadProfileImage();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _savedImageBytes = savedImage;
+        _loadingSavedImage = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loadingSavedImage = false;
+      });
+    }
   }
 
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 100,
+      imageQuality: 85,
+      maxWidth: 1600,
+      maxHeight: 1600,
     );
 
     if (pickedFile == null) {
@@ -48,6 +75,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     if (kIsWeb) {
       setState(() {
         _image = pickedFile;
+        _imageChanged = true;
       });
       return;
     }
@@ -55,7 +83,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final cropped = await ImageCropper().cropImage(
       sourcePath: pickedFile.path,
       compressFormat: ImageCompressFormat.jpg,
-      compressQuality: 95,
+      compressQuality: 72,
       aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
       uiSettings: [
         AndroidUiSettings(
@@ -79,12 +107,31 @@ class _EditProfilePageState extends State<EditProfilePage> {
     if (cropped != null) {
       setState(() {
         _image = XFile(cropped.path);
+        _imageChanged = true;
       });
     }
   }
 
   /// ✅ ตัวนี้สำคัญมาก
   Widget _buildProfileImage() {
+    if (_image == null && _savedImageBytes == null && _loadingSavedImage) {
+      return const CircularProgressIndicator(
+        strokeWidth: 2,
+        valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+      );
+    }
+
+    if (_image == null && _savedImageBytes != null) {
+      return ClipOval(
+        child: Image.memory(
+          _savedImageBytes!,
+          width: 100,
+          height: 100,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+
     if (_image == null) {
       return const Icon(
         Icons.person,
@@ -109,15 +156,37 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
             );
           }
+          if (_savedImageBytes != null) {
+            return ClipOval(
+              child: Image.memory(
+                _savedImageBytes!,
+                width: 100,
+                height: 100,
+                fit: BoxFit.cover,
+              ),
+            );
+          }
           return const CircularProgressIndicator();
         },
       );
     }
 
     // 📱 MOBILE
+    final imageFile = File(_image!.path);
+    if (!imageFile.existsSync() && _savedImageBytes != null) {
+      return ClipOval(
+        child: Image.memory(
+          _savedImageBytes!,
+          width: 100,
+          height: 100,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+
     return ClipOval(
       child: Image.file(
-        File(_image!.path),
+        imageFile,
         width: 100,
         height: 100,
         fit: BoxFit.cover,
@@ -212,40 +281,99 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    onPressed: () async {
-                      // Save image to persistent storage if changed
-                      if (_image != null) {
-                        try {
-                          final imageBytes = await _image!.readAsBytes();
-                          await ProfileStorage.saveProfileImage(
-                            imageBytes,
-                            displayName: nameController.text.trim(),
-                          );
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text(s.errorSavingProfile('$e'))),
+                    onPressed: _isSaving
+                        ? null
+                        : () async {
+                            setState(() {
+                              _isSaving = true;
+                            });
+                            // Let Flutter paint the loading spinner before heavy work starts.
+                            await Future<void>.delayed(
+                              const Duration(milliseconds: 16),
                             );
-                          }
-                          return;
-                        }
-                      }
 
-                      if (context.mounted) {
-                        Navigator.pop(context, {
-                          'name': nameController.text,
-                          'image': _image,
-                        });
-                      }
-                    },
-                    child: Text(
-                      s.saveChanges,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                            // Save image only when user actually changed it.
+                            if (_imageChanged && _image != null) {
+                              try {
+                                final imageBytes = await _image!.readAsBytes();
+                                await ProfileStorage.saveProfileImage(
+                                  imageBytes,
+                                  displayName: nameController.text.trim(),
+                                );
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text(s.errorSavingProfile('$e'))),
+                                  );
+                                }
+                                if (mounted) {
+                                  setState(() {
+                                    _isSaving = false;
+                                  });
+                                }
+                                return;
+                              }
+                            } else {
+                              try {
+                                await ProfileStorage.saveDisplayName(
+                                  nameController.text.trim(),
+                                );
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text(s.errorSavingProfile('$e'))),
+                                  );
+                                }
+                                if (mounted) {
+                                  setState(() {
+                                    _isSaving = false;
+                                  });
+                                }
+                                return;
+                              }
+                            }
+
+                            if (context.mounted) {
+                              Navigator.pop(context, {
+                                'name': nameController.text,
+                                'image': _image,
+                              });
+                            }
+                          },
+                    child: _isSaving
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                s.saveChanges,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Text(
+                            s.saveChanges,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                 ),
               ],

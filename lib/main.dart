@@ -397,6 +397,7 @@ class _MainNavigationState extends State<MainNavigation> {
             if (result != null) {
               final updatedName = (result['name'] as String? ?? '').trim();
               unawaited(_updateFirebaseDisplayName(updatedName));
+              HomeView.invalidateProfileImageCache();
               setState(() {
                 _profileName =
                     updatedName.isNotEmpty ? updatedName : _profileName;

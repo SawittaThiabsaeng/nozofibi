@@ -137,7 +137,7 @@ MoodResult getMoodDetailsByMood(String moodName) {
         name: 'Excited',
         emoji: '✨',
         message: 'Your energy is contagious!',
-        color: const Color(0xFFF472B6),
+        color: const Color(0xFFC084CC),
       );
     case 'Happy':
       return MoodResult(
@@ -165,7 +165,7 @@ MoodResult getMoodDetailsByMood(String moodName) {
         name: 'Bored',
         emoji: '😑',
         message: "Maybe it's time for a change of pace",
-        color: const Color(0xFF64748B),
+        color: const Color(0xFF93B9DD),
       );
     case 'Neutral':
       return MoodResult(
