@@ -2,7 +2,7 @@ name: nozofibi
 description: A study timer app with task management and session tracking.
 publish_to: 'none'
 
-version: 1.0.0+2
+version: 1.0.0+3
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
