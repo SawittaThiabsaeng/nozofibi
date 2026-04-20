@@ -593,9 +593,10 @@ class HomeView extends StatelessWidget {
                                 child: ElevatedButton.icon(
                                   onPressed: onOpenEmotionAnalytics,
                                   icon: const Icon(Icons.casino_outlined),
-                                  label: Text(isThai
-                                      ? 'สุ่มอารมณ์ตอนนี้'
-                                      : 'Check Mood Now'),
+                                  label: Text(
+                                    isThai ? 'สุ่มอารมณ์ตอนนี้' : 'Check Mood Now',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                   style: ElevatedButton.styleFrom(
                                     elevation: 0,
                                     shadowColor: Colors.transparent,

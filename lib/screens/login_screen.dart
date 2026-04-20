@@ -10,6 +10,7 @@ import '../l10n/app_strings.dart';
 import '../services/app_logger.dart';
 import '../widgets/brand_wordmark.dart';
 import '../widgets/final_app_logo.dart';
+import '../services/notification_service.dart';
 
 class LoginScreen extends StatefulWidget {
   LoginScreen({
@@ -59,6 +60,8 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
+    // debug ชั่วคราว ลบทีหลัง
+      // debug ชั่วคราว ลบทีหลัง
     // Cleanup session on login screen entry (user logged out)
     _cleanupSession();
   }
@@ -237,6 +240,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
         await credential.user?.updateDisplayName(name);
         await PrivacyStorage.saveConsentAcceptedNow();
+        await NotificationService.requestPermissionIfNeeded();
         widget.onLogin?.call(name.isNotEmpty ? name : email.split('@').first);
       }
     } on FirebaseAuthException catch (e) {
@@ -626,6 +630,7 @@ class _LoginScreenState extends State<LoginScreen> {
         await widget.onConsentAccepted!();
       } else {
         await PrivacyStorage.saveConsentAcceptedNow();
+        await NotificationService.requestPermissionIfNeeded();
       }
       return true;
     }
@@ -641,6 +646,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<bool> _ensureConsentAfterEmailLogin() async {
     if (PrivacyStorage.hasConsent()) {
+      // มี consent แล้ว แต่ยังต้องขอ notification permission
+      await NotificationService.requestPermissionIfNeeded();
       return true;
     }
 
@@ -650,6 +657,7 @@ class _LoginScreenState extends State<LoginScreen> {
         await widget.onConsentAccepted!();
       } else {
         await PrivacyStorage.saveConsentAcceptedNow();
+        await NotificationService.requestPermissionIfNeeded();
       }
       return true;
     }
@@ -851,7 +859,12 @@ class _LoginScreenState extends State<LoginScreen> {
           backgroundColor: const Color(0xFFFDFCFE),
           body: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.fromLTRB(
+                24,
+                24,
+                24,
+                24 + MediaQuery.of(context).padding.bottom,
+              ),
               child: Form(
                 key: _formKey,
                 child: Column(

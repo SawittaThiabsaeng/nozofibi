@@ -46,7 +46,7 @@ class AppTheme {
   static TextStyle get h1 => const TextStyle(
         fontSize: 28,
         fontWeight: FontWeight.w900,
-        letterSpacing: -1.5,
+        letterSpacing: 0,
       );
 
   static TextStyle get h2 => const TextStyle(
@@ -86,6 +86,7 @@ class AppTheme {
           titleTextStyle: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
+            letterSpacing: 0,
             color: isDarkMode ? Colors.white : textDark,
           ),
         ),

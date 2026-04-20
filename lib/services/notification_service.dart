@@ -23,7 +23,7 @@ class NotificationService {
       return;
     }
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings('ic_notification');
     const darwinSettings = DarwinInitializationSettings();
 
     const settings = InitializationSettings(
@@ -103,6 +103,8 @@ class NotificationService {
       channelDescription: 'Daily study reminder notifications',
       importance: Importance.high,
       priority: Priority.high,
+      icon: 'ic_notification',
+      autoCancel: false,
     );
     const iosDetails = DarwinNotificationDetails();
 
@@ -119,10 +121,10 @@ class NotificationService {
         body,
         _nextInstanceOfTime(hour: hour, minute: minute),
         notificationDetails,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.time,
         uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
+        UILocalNotificationDateInterpretation.absoluteTime,
       );
     } catch (e, st) {
       logError(e, st);
@@ -169,8 +171,12 @@ class NotificationService {
       'instant_reminder',
       'Instant Reminder',
       channelDescription: 'Immediate reminder notifications',
-      importance: Importance.high,
-      priority: Priority.high,
+      importance: Importance.max,
+      priority: Priority.max,
+      icon: 'ic_notification',
+      autoCancel: false,
+      playSound: true,
+      enableVibration: true,
     );
     const iosDetails = DarwinNotificationDetails();
 
@@ -181,7 +187,7 @@ class NotificationService {
     );
 
     await _plugin.show(
-      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      1002,
       title,
       body,
       notificationDetails,
@@ -230,6 +236,7 @@ class NotificationService {
       channelDescription: 'Per-task schedule reminder notifications',
       importance: Importance.high,
       priority: Priority.high,
+      icon: 'ic_notification',
     );
     const iosDetails = DarwinNotificationDetails();
     const details = NotificationDetails(

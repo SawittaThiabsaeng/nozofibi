@@ -33,11 +33,7 @@ class _EmotionResultScreenState extends State<EmotionResultScreen> {
   }
 
   void _backToAnalytics() {
-    for (var i = 0; i < 3; i++) {
-      if (Navigator.canPop(context)) {
-        Navigator.pop(context);
-      }
-    }
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   @override
@@ -224,7 +220,12 @@ class _EmotionResultScreenState extends State<EmotionResultScreen> {
         ),
       ),
       bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.fromLTRB(
+          24,
+          24,
+          24,
+          24 + MediaQuery.of(context).padding.bottom,
+        ),
         child: Row(
           children: [
             Expanded(

@@ -4,6 +4,7 @@ import '../data/language_preference_storage.dart';
 import '../data/notification_preference_storage.dart';
 import '../l10n/app_strings.dart';
 import '../services/notification_service.dart';
+import 'package:app_settings/app_settings.dart';
 import '../theme/app_theme.dart';
 import '../widgets/final_app_logo.dart';
 import '../widgets/roller_time_picker.dart';
@@ -47,41 +48,48 @@ class _SettingsViewState extends State<SettingsView> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        backgroundColor: AppTheme.creamBackground,
-        extendBodyBehindAppBar: true,
-        appBar: AppBar(
-          title: Text(AppStrings.of(context).settings, style: AppTheme.h2),
-          actions: const [
-            Padding(
-              padding: EdgeInsets.only(right: 14),
-              child: SizedBox(
-                width: 26,
-                height: 26,
-                child: NozofibiLogo(size: 26),
-              ),
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Scaffold(
+      backgroundColor: AppTheme.creamBackground,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: Text(AppStrings.of(context).settings),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 14),
+            child: SizedBox(
+              width: 26,
+              height: 26,
+              child: NozofibiLogo(size: 26),
             ),
-          ],
-          backgroundColor: Colors.transparent,
-          surfaceTintColor: Colors.transparent,
-          scrolledUnderElevation: 0,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded),
-            onPressed: () {
-              final navigator = Navigator.of(context);
-              if (navigator.canPop()) {
-                navigator.pop();
-                return;
-              }
-              widget.onBack();
-            },
           ),
+        ],
+        backgroundColor: isDark ? Colors.black.withOpacity(0.5) : Colors.white,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () {
+            final navigator = Navigator.of(context);
+            if (navigator.canPop()) {
+              navigator.pop();
+              return;
+            }
+            widget.onBack();
+          },
         ),
-        body: SoftBackground(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(24, 100, 24, 24),
-            children: [
+      ),
+      body: SoftBackground(
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            100,
+            24,
+            24 + MediaQuery.of(context).padding.bottom,
+          ),
+          children: [
               _section(AppStrings.of(context).preferences),
               _switchTile(
                 AppStrings.of(context).pushNotifications,
@@ -92,6 +100,10 @@ class _SettingsViewState extends State<SettingsView> {
               _tile(
                 AppStrings.of(context).testNotification,
                 tap: _sendTestNotification,
+              ),
+              _tile(
+                AppStrings.of(context).accountSettings,
+                tap: () => AppSettings.openAppSettings(),
               ),
               _switchTile(
                 AppStrings.of(context).darkModeBeta,
@@ -138,10 +150,14 @@ class _SettingsViewState extends State<SettingsView> {
           ),
         ),
       );
+    }
 
   Widget _section(String t) => Padding(
         padding: const EdgeInsets.only(bottom: 12, left: 4),
-        child: Text(t, style: AppTheme.caption),
+        child: Text(
+          t,
+          style: AppTheme.caption.copyWith(letterSpacing: 1.2),
+        ),
       );
 
   Widget _switchTile(String t, bool v, ValueChanged<bool> c) => ListTile(
@@ -265,14 +281,16 @@ class _SettingsViewState extends State<SettingsView> {
     if (enabled) {
       final granted = await NotificationService.requestPermissionIfNeeded();
       if (!granted) {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _notifications = false;
-        });
+        if (!mounted) return;
+        setState(() => _notifications = false);
         messenger.showSnackBar(
-          SnackBar(content: Text(strings.notificationsDisabled)),
+          SnackBar(
+            content: Text(strings.notificationsDisabled),
+            action: SnackBarAction(
+              label: 'เปิดการตั้งค่า',
+              onPressed: () => AppSettings.openAppSettings(),
+            ),
+          ),
         );
         await NotificationPreferenceStorage.setEnabled(enabled: false);
         return;

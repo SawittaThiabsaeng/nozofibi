@@ -291,197 +291,195 @@ class _ScheduleViewState extends State<ScheduleView> {
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
-      ),
       builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.fromLTRB(
-            24,
-            32,
-            24,
-            MediaQuery.of(context).viewInsets.bottom + 32,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                AppStrings.of(context).addNewPlan,
-                style: isDark
-                    ? AppTheme.h2.copyWith(color: Colors.white)
-                    : AppTheme.h2,
-              ),
-              const SizedBox(height: 24),
-              TextField(
-                controller: controller,
-                style: const TextStyle(color: Color(0xFF111827)),
-                decoration: InputDecoration(
-                  hintText: AppStrings.of(context).whatPlanning,
-                  hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: BorderSide.none,
-                  ),
+        builder: (context, setModalState) => SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              24,
+              32,
+              24,
+              MediaQuery.of(context).viewInsets.bottom + 48,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  AppStrings.of(context).addNewPlan,
+                  style: isDark
+                      ? AppTheme.h2.copyWith(color: Colors.white)
+                      : AppTheme.h2,
                 ),
-              ),
-              const SizedBox(height: 14),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  AppStrings.of(context).planType,
-                  style: AppTheme.caption,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final type in const [
-                    TaskType.breakTime,
-                    TaskType.study,
-                    TaskType.exercise,
-                    TaskType.rest,
-                  ])
-                    ChoiceChip(
-                      avatar: Icon(
-                        _icon(type),
-                        size: 16,
-                        color: selectedType == type
-                            ? Colors.white
-                            : AppTheme.primary,
-                      ),
-                      label: Text(_taskTypeLabel(type, AppStrings.of(context))),
-                      selected: selectedType == type,
-                      onSelected: (_) {
-                        setModalState(() => selectedType = type);
-                      },
-                      selectedColor: AppTheme.primary,
-                      labelStyle: TextStyle(
-                        color: selectedType == type ? Colors.white : null,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              InkWell(
-                borderRadius: BorderRadius.circular(18),
-                onTap: () async {
-                  final picked = await showRollerTimePicker(
-                    context: context,
-                    initialTime: selectedTime,
-                  );
-                  if (picked != null) {
-                    setModalState(() => selectedTime = picked);
-                  }
-                },
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.schedule_rounded),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              AppStrings.of(context).setTime,
-                              style: AppTheme.caption,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              selectedTime.format(context),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF111827),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Text(
-                        AppStrings.of(context).tapToChangeTime,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF64748B),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  AppStrings.of(context).quickPick,
-                  style: AppTheme.caption,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: [
-                  for (final preset in const [
-                    TimeOfDay(hour: 8, minute: 0),
-                    TimeOfDay(hour: 13, minute: 0),
-                    TimeOfDay(hour: 19, minute: 0),
-                  ])
-                    ChoiceChip(
-                      label: Text(preset.format(context)),
-                      selected: preset.hour == selectedTime.hour &&
-                          preset.minute == selectedTime.minute,
-                      onSelected: (_) {
-                        setModalState(() => selectedTime = preset);
-                      },
-                    ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    final title = controller.text.trim();
-                    if (title.isEmpty) {
-                      return;
-                    }
-
-                    widget.onAddTask(
-                      ScheduleTask(
-                        id: DateTime.now().toString(),
-                        date: date,
-                        time: selectedTime.format(context),
-                        title: title,
-                        type: selectedType,
-                      ),
-                    );
-                    Navigator.pop(context, true);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: controller,
+                  style: const TextStyle(color: Color(0xFF111827)),
+                  decoration: InputDecoration(
+                    hintText: AppStrings.of(context).whatPlanning,
+                    hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide.none,
                     ),
                   ),
+                ),
+                const SizedBox(height: 14),
+                Align(
+                  alignment: Alignment.centerLeft,
                   child: Text(
-                    AppStrings.of(context).savePlan,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    AppStrings.of(context).planType,
+                    style: AppTheme.caption,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final type in const [
+                      TaskType.breakTime,
+                      TaskType.study,
+                      TaskType.exercise,
+                      TaskType.rest,
+                    ])
+                      ChoiceChip(
+                        avatar: Icon(
+                          _icon(type),
+                          size: 16,
+                          color: selectedType == type
+                              ? Colors.white
+                              : AppTheme.primary,
+                        ),
+                        label: Text(_taskTypeLabel(type, AppStrings.of(context))),
+                        selected: selectedType == type,
+                        onSelected: (_) {
+                          setModalState(() => selectedType = type);
+                        },
+                        selectedColor: AppTheme.primary,
+                        labelStyle: TextStyle(
+                          color: selectedType == type ? Colors.white : null,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: () async {
+                    final picked = await showRollerTimePicker(
+                      context: context,
+                      initialTime: selectedTime,
+                    );
+                    if (picked != null) {
+                      setModalState(() => selectedTime = picked);
+                    }
+                  },
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.schedule_rounded),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                AppStrings.of(context).setTime,
+                                style: AppTheme.caption,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                selectedTime.format(context),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF111827),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          AppStrings.of(context).tapToChangeTime,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    AppStrings.of(context).quickPick,
+                    style: AppTheme.caption,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final preset in const [
+                      TimeOfDay(hour: 8, minute: 0),
+                      TimeOfDay(hour: 13, minute: 0),
+                      TimeOfDay(hour: 19, minute: 0),
+                    ])
+                      ChoiceChip(
+                        label: Text(preset.format(context)),
+                        selected: preset.hour == selectedTime.hour &&
+                            preset.minute == selectedTime.minute,
+                        onSelected: (_) {
+                          setModalState(() => selectedTime = preset);
+                        },
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final title = controller.text.trim();
+                      if (title.isEmpty) {
+                        return;
+                      }
+
+                      widget.onAddTask(
+                        ScheduleTask(
+                          id: DateTime.now().toString(),
+                          date: date,
+                          time: selectedTime.format(context),
+                          title: title,
+                          type: selectedType,
+                        ),
+                      );
+                      Navigator.pop(context, true);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: Text(
+                      AppStrings.of(context).savePlan,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

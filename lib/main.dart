@@ -11,6 +11,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import 'data/app_local_db.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'data/account_service.dart';
 import 'data/focus_storage.dart';
 import 'data/language_preference_storage.dart';
 import 'firebase_options.dart';
@@ -69,8 +71,7 @@ Future<void> _configureAppCheck() async {
   }
 
   await FirebaseAppCheck.instance.activate(
-    androidProvider:
-        kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+    androidProvider: AndroidProvider.playIntegrity,
   );
 }
 
@@ -369,14 +370,49 @@ class _MainNavigationState extends State<MainNavigation> {
                   onBack: () => Navigator.pop(context),
                   onThemeChanged: widget.onToggleDarkMode,
                   onDeleteMyData: () async {
-                    final taskProvider = context.read<TaskProvider>();
-                    await FocusStorage.clear();
-                    await taskProvider.clearAll();
+                    final messenger = ScaffoldMessenger.of(context);
+                    try {
+                      final taskProvider = context.read<TaskProvider>();
+                      await Future.wait([
+                        Hive.box<String>(AppLocalDb.sessionsBox).clear(),
+                        Hive.box<String>(AppLocalDb.tasksBox).clear(),
+                        Hive.box<String>(AppLocalDb.privacyBox).clear(),
+                        Hive.box(AppLocalDb.profileBox).clear(),
+                        FocusStorage.clear(),
+                        taskProvider.clearAll(),
+                      ]);
+                      if (!context.mounted) return;
+                      messenger.showSnackBar(
+                        const SnackBar(content: Text('ลบข้อมูลในเครื่องแล้ว')),
+                      );
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text('ลบข้อมูลไม่สำเร็จ: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
                   },
                   onDeleteAccount: () async {
-                    final taskProvider = context.read<TaskProvider>();
-                    await FocusStorage.clear();
-                    await taskProvider.clearAll();
+                    final messenger = ScaffoldMessenger.of(context);
+                    try {
+                      final taskProvider = context.read<TaskProvider>();
+                      await FocusStorage.clear();
+                      await taskProvider.clearAll();
+                      await AccountService.deleteAccount();
+                      if (context.mounted) {
+                        Navigator.of(context).popUntil((route) => route.isFirst);
+                      }
+                    } catch (e) {
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text('ลบบัญชีไม่สำเร็จ: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
                   },
                   onLanguageChanged: widget.onLanguageChanged,
                 ),
@@ -437,7 +473,7 @@ class _MainNavigationState extends State<MainNavigation> {
               children: _buildIndexedChildren(),
             ),
             Positioned(
-              bottom: 30,
+              bottom: 30 + MediaQuery.of(context).padding.bottom,
               left: 20,
               right: 20,
               child: CustomNavBar(

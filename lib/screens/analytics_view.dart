@@ -108,7 +108,12 @@ class _AnalyticsViewState extends State<AnalyticsView> {
                   /// 📊 Content
                   SafeArea(
                     child: ListView(
-                      padding: const EdgeInsets.all(24),
+                      padding: EdgeInsets.fromLTRB(
+                        24,
+                        24,
+                        24,
+                        24 + MediaQuery.of(context).padding.bottom + 80,
+                      ),
                       children: [
                         const SizedBox(height: 20),
                         Text(
