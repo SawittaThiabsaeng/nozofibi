@@ -31,6 +31,7 @@ import 'screens/settings_view.dart';
 import 'screens/timer_view.dart';
 import 'services/app_logger.dart';
 import 'theme/app_theme.dart';
+import 'data/emotion_checkin_storage.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -380,6 +381,7 @@ class _MainNavigationState extends State<MainNavigation> {
                         Hive.box(AppLocalDb.profileBox).clear(),
                         FocusStorage.clear(),
                         taskProvider.clearAll(),
+                        EmotionCheckinStorage.clear(),
                       ]);
                       if (!context.mounted) return;
                       messenger.showSnackBar(

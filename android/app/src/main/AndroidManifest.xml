@@ -4,7 +4,7 @@
 <application 
 android:label="Nozofibi" 
 android:name="${applicationName}" 
-android:icon="@drawable/nozofibi_logo" 
+android:icon="@mipmap/ic_launcher" 
 android:roundIcon="@drawable/nozofibi_logo">
 <activity android:name=".MainActivity" 
 android:exported="true" 
