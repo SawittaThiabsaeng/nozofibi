@@ -4,7 +4,7 @@ import org.gradle.api.GradleException
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
-    id("com.google.gms.google-services")
+    // id("com.google.gms.google-services") // <-- ลบออก ให้ใช้แค่ใน build.gradle.kts
     // END: FlutterFire Configuration
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -114,4 +114,10 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+
+    // Import the Firebase BoM
+    implementation(platform("com.google.firebase:firebase-bom:34.12.0"))
+    // Add the dependencies for Firebase products you want to use
+    implementation("com.google.firebase:firebase-analytics")
+    // Add other Firebase dependencies as needed
 }

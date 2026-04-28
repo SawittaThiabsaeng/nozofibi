@@ -1,3 +1,4 @@
+import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/material.dart';
 
 import '../data/language_preference_storage.dart';
@@ -30,21 +31,52 @@ class SettingsView extends StatefulWidget {
   State<SettingsView> createState() => _SettingsViewState();
 }
 
-class _SettingsViewState extends State<SettingsView> {
-  bool _notifications = true;
-  late String _selectedLanguage;
-  late TimeOfDay _reminderTime;
+class _SettingsViewState extends State<SettingsView>
+
+    with WidgetsBindingObserver {
+
+  bool _notifications = false;
+  String _selectedLanguage = 'en';
+  TimeOfDay _reminderTime = const TimeOfDay(hour: 20, minute: 0);
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadSettings();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadSettings();
+    }
+  }
+
+  Future<void> _loadSettings() async {
     _selectedLanguage = LanguagePreferenceStorage.getLanguage();
-    _notifications = NotificationPreferenceStorage.getEnabled();
+
+    final permission = await Permission.notification.status;
+    final savedEnabled = NotificationPreferenceStorage.getEnabled();
+    final realEnabled = permission.isGranted && savedEnabled;
+
     final savedReminder = NotificationPreferenceStorage.getReminderTime();
-    _reminderTime = TimeOfDay(
-      hour: savedReminder.hour,
-      minute: savedReminder.minute,
-    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _notifications = realEnabled;
+      _reminderTime = TimeOfDay(
+        hour: savedReminder.hour,
+        minute: savedReminder.minute,
+      );
+    });
   }
 
   @override
@@ -81,6 +113,7 @@ class _SettingsViewState extends State<SettingsView> {
           },
         ),
       ),
+
       body: SoftBackground(
         child: ListView(
           padding: EdgeInsets.fromLTRB(
@@ -164,7 +197,19 @@ class _SettingsViewState extends State<SettingsView> {
         title: Text(t, style: AppTheme.bodyBold),
         trailing: Switch(
           value: v,
-          onChanged: c,
+          onChanged: (enabled) async {
+            if (enabled) {
+              final granted = await NotificationService.requestPermissionIfNeeded();
+              if (!granted && context.mounted) {
+                // ถ้าไม่ได้ permission ให้เปิด settings
+                AppSettings.openAppSettings();
+                // ปิด toggle กลับ
+                c(false);
+                return;
+              }
+            }
+            c(enabled);
+          },
           activeThumbColor: AppTheme.primary,
         ),
       );

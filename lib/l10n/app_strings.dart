@@ -261,6 +261,7 @@ class AppStrings {
   String get typeHomework => pick('Homework', 'ทำการบ้าน');
   String get savePlan => pick('Save Plan', 'บันทึกแผน');
     String get planSaved => pick('Plan saved', 'บันทึกแผนแล้ว');
+    String get editPlan => pick('Edit Plan', 'แก้ไขแผน');
 
   // Timer
   String get focusTimer => pick('Focus Timer', 'โหมดโฟกัส');

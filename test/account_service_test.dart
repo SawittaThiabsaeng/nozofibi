@@ -10,6 +10,7 @@ void main() {
 
   setUp(() async {
     firestore = FakeFirebaseFirestore();
+
     auth = MockFirebaseAuth(
       mockUser: MockUser(
         uid: 'user-1',
@@ -24,21 +25,31 @@ void main() {
     );
   });
 
-  tearDown(AccountService.resetForTesting);
+  tearDown(() {
+    AccountService.resetForTesting();
+  });
 
   group('AccountService.submitConsent', () {
     test('throws when user is not authenticated', () async {
       final signedOutAuth = MockFirebaseAuth(signedIn: false);
-      AccountService.configureForTesting(auth: signedOutAuth);
+
+      AccountService.configureForTesting(
+        auth: signedOutAuth,
+        firestore: firestore,
+      );
 
       expect(
-        () => AccountService.submitConsent(accepted: true),
+        () => AccountService.submitConsent(
+          uid: 'user-1',
+          accepted: true,
+        ),
         throwsA(isA<Exception>()),
       );
     });
 
     test('stores consent entry and profile summary', () async {
       final ok = await AccountService.submitConsent(
+        uid: 'user-1',
         accepted: true,
         customVersion: '1.2.3',
       );
@@ -52,21 +63,29 @@ void main() {
           .get();
 
       expect(consentDocs.docs.length, 1);
-      expect(consentDocs.docs.first.data()['accepted'], true);
-      expect(consentDocs.docs.first.data()['version'], '1.2.3');
-      expect(consentDocs.docs.first.data()['source'], 'client');
+
+      final consentData = consentDocs.docs.first.data();
+
+      expect(consentData['accepted'], true);
+      expect(consentData['version'], '1.2.3');
+      expect(consentData['source'], 'client');
 
       final userDoc =
           await firestore.collection('users').doc('user-1').get();
+
       expect(userDoc.exists, isTrue);
-      expect(userDoc.data()?['consented'], true);
-      expect(userDoc.data()?['consentVersion'], '1.2.3');
-      expect(userDoc.data()?['requiredConsentAccepted'], true);
-      expect(userDoc.data()?['marketingConsentOptIn'], false);
+
+      final userData = userDoc.data();
+
+      expect(userData?['consented'], true);
+      expect(userData?['consentVersion'], '1.2.3');
+      expect(userData?['requiredConsentAccepted'], true);
+      expect(userData?['marketingConsentOptIn'], false);
     });
 
     test('stores marketing opt-in when requested', () async {
       final ok = await AccountService.submitConsent(
+        uid: 'user-1',
         accepted: true,
         customVersion: '2.0.0',
         marketingOptIn: true,
@@ -81,12 +100,17 @@ void main() {
           .get();
 
       expect(consentDocs.docs.length, 1);
+
       final data = consentDocs.docs.first.data();
+
       expect(data['requiredConsentAccepted'], true);
       expect(data['marketingConsentOptIn'], true);
 
-      final userDoc = await firestore.collection('users').doc('user-1').get();
+      final userDoc =
+          await firestore.collection('users').doc('user-1').get();
+
       final userData = userDoc.data();
+
       expect(userData?['requiredConsentAccepted'], true);
       expect(userData?['marketingConsentOptIn'], true);
     });
@@ -102,6 +126,7 @@ void main() {
         'accepted': true,
         'timestamp': 1000,
       });
+
       await consentRef.add({
         'version': '1.1.0',
         'accepted': false,
@@ -118,13 +143,17 @@ void main() {
   });
 
   group('AccountService.deleteAccount', () {
-    test('anonymizes user document and removes user-owned subcollections', () async {
+    test(
+        'anonymizes user document and removes user-owned subcollections',
+        () async {
       final userDoc = firestore.collection('users').doc('user-1');
 
       await userDoc.set({'name': 'User One'});
+
       await userDoc.collection('focus_sessions_v2').doc('s1').set({
         'totalSeconds': 1500,
       });
+
       await userDoc.collection('consent').doc('c1').set({
         'version': '1.0.0',
         'accepted': true,
@@ -138,16 +167,29 @@ void main() {
       expect(ok, isTrue);
 
       final anonymizedUser = await userDoc.get();
+
       expect(anonymizedUser.exists, isTrue);
-      expect(anonymizedUser.data()?['isDeleted'], isTrue);
+      expect(anonymizedUser.data()?['isDeleted'], true);
       expect(anonymizedUser.data()?['deleteReason'], 'Test deletion');
-      expect(anonymizedUser.data()?['requiredConsentAccepted'], false);
-      expect(anonymizedUser.data()?['marketingConsentOptIn'], false);
-      expect(anonymizedUser.data()?['email'], startsWith('deleted_'));
+      expect(
+        anonymizedUser.data()?['requiredConsentAccepted'],
+        false,
+      );
+      expect(
+        anonymizedUser.data()?['marketingConsentOptIn'],
+        false,
+      );
+      expect(
+        anonymizedUser.data()?['email'],
+        startsWith('deleted_'),
+      );
 
       final sessionsAfter =
           await userDoc.collection('focus_sessions_v2').get();
-      final consentsAfter = await userDoc.collection('consent').get();
+
+      final consentsAfter =
+          await userDoc.collection('consent').get();
+
       expect(sessionsAfter.docs, isEmpty);
       expect(consentsAfter.docs, isEmpty);
       expect(auth.currentUser, isNull);
@@ -155,6 +197,8 @@ void main() {
 
     test('prompts sign-in again when recent login is required', () async {
       AccountService.configureForTesting(
+        auth: auth,
+        firestore: firestore,
         deleteAuthUserOverride: (_) async {
           throw FirebaseAuthException(
             code: 'requires-recent-login',
@@ -165,10 +209,13 @@ void main() {
       );
 
       expect(
-        () => AccountService.deleteAccount(reason: 'Reauth check'),
+        () => AccountService.deleteAccount(
+          reason: 'Reauth check',
+        ),
         throwsA(
           predicate(
-            (e) => e.toString().contains('Please sign in again'),
+            (e) =>
+                e.toString().contains('Please sign in again'),
           ),
         ),
       );
@@ -176,9 +223,13 @@ void main() {
 
     test('retries deletion once after successful re-auth', () async {
       var attempts = 0;
+
       AccountService.configureForTesting(
+        auth: auth,
+        firestore: firestore,
         deleteAuthUserOverride: (_) async {
-          attempts += 1;
+          attempts++;
+
           if (attempts == 1) {
             throw FirebaseAuthException(
               code: 'requires-recent-login',
@@ -197,8 +248,12 @@ void main() {
       expect(attempts, 2);
     });
 
-    test('maps firestore data-deletion failure to user-friendly error', () async {
+    test(
+        'maps firestore data-deletion failure to user-friendly error',
+        () async {
       AccountService.configureForTesting(
+        auth: auth,
+        firestore: firestore,
         deleteUserDataOverride: (_, __) async {
           throw FirebaseException(
             plugin: 'cloud_firestore',
@@ -209,10 +264,14 @@ void main() {
       );
 
       expect(
-        () => AccountService.deleteAccount(reason: 'Firestore failure test'),
+        () => AccountService.deleteAccount(
+          reason: 'Firestore failure test',
+        ),
         throwsA(
           predicate(
-            (e) => e.toString().contains('Failed to delete account data'),
+            (e) => e
+                .toString()
+                .contains('Failed to delete account data'),
           ),
         ),
       );

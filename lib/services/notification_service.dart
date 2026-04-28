@@ -1,3 +1,4 @@
+import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:intl/intl.dart';
@@ -6,25 +7,31 @@ import 'package:timezone/timezone.dart' as tz;
 
 import 'app_logger.dart';
 
+@pragma('vm:entry-point')
+void _onBackgroundNotification(NotificationResponse response) {}
+
 class NotificationService {
+  static bool _askedPermission = false;
   NotificationService._();
 
   static final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
   static const int _dailyReminderId = 1001;
-  static const int _taskReminderOffsetMinutes = 10;
+  static const int _taskReminderOffsetMinutes = 0;
   static const int _taskReminderBaseId = 100000;
   static bool _initialized = false;
   static bool _timezoneReady = false;
 
   static Future<void> initialize() async {
-    if (_initialized) {
-      return;
-    }
+    if (_initialized) return;
 
-    const androidSettings = AndroidInitializationSettings('ic_notification');
-    const darwinSettings = DarwinInitializationSettings();
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const darwinSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
 
     const settings = InitializationSettings(
       android: androidSettings,
@@ -32,60 +39,65 @@ class NotificationService {
       macOS: darwinSettings,
     );
 
-    await _plugin.initialize(settings);
+    await _plugin.initialize(
+      settings,
+      onDidReceiveNotificationResponse: (response) {},
+      onDidReceiveBackgroundNotificationResponse: _onBackgroundNotification,
+    );
+
     await _configureLocalTimezone();
+    await _requestExactAlarmPermission(); // ✅ เพิ่ม
     _initialized = true;
+    print('✅ NotificationService initialized');
   }
 
   static Future<void> _configureLocalTimezone() async {
-    if (_timezoneReady) {
-      return;
-    }
+    if (_timezoneReady) return;
 
     tz.initializeTimeZones();
     try {
       final timezoneName = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(timezoneName));
+      print('🌍 Timezone set to: $timezoneName');
     } catch (e) {
       AppLogger.warn('Falling back to UTC timezone for notifications: $e');
       tz.setLocalLocation(tz.UTC);
+      print('⚠️ Timezone fallback to UTC');
     }
 
     _timezoneReady = true;
   }
 
   static Future<bool> requestPermissionIfNeeded() async {
+    if (_askedPermission) return true;
+    _askedPermission = true;
     try {
       await initialize();
 
-      final androidImpl = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
-      final iosImpl = _plugin
-          .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
-      final macImpl = _plugin.resolvePlatformSpecificImplementation<
-          MacOSFlutterLocalNotificationsPlugin>();
+      final status = await Permission.notification.status;
+      print('🔔 Notification permission status: $status');
 
-      final androidGranted = await androidImpl?.requestNotificationsPermission();
-      final iosGranted = await iosImpl?.requestPermissions(
-            alert: true,
-            badge: true,
-            sound: true,
-          );
-      final macGranted = await macImpl?.requestPermissions(
-            alert: true,
-            badge: true,
-            sound: true,
-          );
-
-      final all =
-          <bool?>[androidGranted, iosGranted, macGranted].whereType<bool>().toList();
-      if (all.isEmpty) {
-        return true;
+      if (status.isGranted) return true;
+      if (status.isPermanentlyDenied) {
+        print('❌ Permission permanently denied');
+        return false;
       }
-      return all.every((granted) => granted);
+
+      final result = await Permission.notification.request();
+      print('🔔 Permission request result: $result');
+      return result.isGranted;
     } catch (e, st) {
       logError(e, st);
       return false;
+    }
+  }
+
+  static Future<bool> isPermissionGranted() async {
+    try {
+      final status = await Permission.notification.status;
+      return status.isGranted;
+    } catch (_) {
+      return true;
     }
   }
 
@@ -103,11 +115,10 @@ class NotificationService {
       channelDescription: 'Daily study reminder notifications',
       importance: Importance.high,
       priority: Priority.high,
-      icon: 'ic_notification',
+      icon: '@mipmap/ic_launcher',
       autoCancel: false,
     );
     const iosDetails = DarwinNotificationDetails();
-
     const notificationDetails = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
@@ -121,10 +132,10 @@ class NotificationService {
         body,
         _nextInstanceOfTime(hour: hour, minute: minute),
         notificationDetails,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle, // ✅ ไม่ใช้ alarmClock เพราะใช้ matchDateTimeComponents
         matchDateTimeComponents: DateTimeComponents.time,
         uiLocalNotificationDateInterpretation:
-        UILocalNotificationDateInterpretation.absoluteTime,
+            UILocalNotificationDateInterpretation.absoluteTime,
       );
     } catch (e, st) {
       logError(e, st);
@@ -167,31 +178,26 @@ class NotificationService {
     required String body,
   }) async {
     await initialize();
+
     const androidDetails = AndroidNotificationDetails(
       'instant_reminder',
       'Instant Reminder',
       channelDescription: 'Immediate reminder notifications',
       importance: Importance.max,
       priority: Priority.max,
-      icon: 'ic_notification',
+      icon: '@mipmap/ic_launcher',
       autoCancel: false,
       playSound: true,
       enableVibration: true,
     );
     const iosDetails = DarwinNotificationDetails();
-
     const notificationDetails = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
       macOS: iosDetails,
     );
 
-    await _plugin.show(
-      1002,
-      title,
-      body,
-      notificationDetails,
-    );
+    await _plugin.show(1002, title, body, notificationDetails);
   }
 
   static Future<void> scheduleTaskReminder({
@@ -204,8 +210,19 @@ class NotificationService {
   }) async {
     await initialize();
 
+    print('─────────────────────────────────');
+    print('🔔 scheduleTaskReminder called');
+    print('   taskTitle    : $taskTitle');
+    print('   reminderBody : $reminderBody');
+    print('   taskTimeText : $taskTimeText');
+    print('   taskDate     : $taskDate');
+    print('   localeTag    : $localeTag');
+
     final time = _parseTaskTime(taskTimeText, localeTag: localeTag);
+    print('   parsed time  : $time');
+
     if (time == null) {
+      print('❌ time parse failed → abort');
       return;
     }
 
@@ -219,15 +236,24 @@ class NotificationService {
     );
 
     final now = tz.TZDateTime.now(tz.local);
+    print('   taskMoment   : $taskMoment');
+    print('   now          : $now');
+    print('   isAfter      : ${taskMoment.isAfter(now)}');
+
     if (!taskMoment.isAfter(now)) {
+      print('❌ time already passed → abort');
       return;
     }
 
     var notifyAt = taskMoment.subtract(
       const Duration(minutes: _taskReminderOffsetMinutes),
     );
+
     if (!notifyAt.isAfter(now)) {
       notifyAt = now.add(const Duration(seconds: 5));
+      print('⚠️ notifyAt adjusted to +5s: $notifyAt');
+    } else {
+      print('   notifyAt     : $notifyAt');
     }
 
     const androidDetails = AndroidNotificationDetails(
@@ -236,7 +262,7 @@ class NotificationService {
       channelDescription: 'Per-task schedule reminder notifications',
       importance: Importance.high,
       priority: Priority.high,
-      icon: 'ic_notification',
+      icon: '@mipmap/ic_launcher',
     );
     const iosDetails = DarwinNotificationDetails();
     const details = NotificationDetails(
@@ -245,22 +271,31 @@ class NotificationService {
       macOS: iosDetails,
     );
 
-    final id = _taskNotificationId(taskId);
-    await _plugin.zonedSchedule(
-      id,
-      taskTitle,
-      reminderBody,
-      notifyAt,
-      details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-    );
+    try {
+  await _plugin.zonedSchedule(
+    _taskNotificationId(taskId),
+    taskTitle,
+    reminderBody,
+    notifyAt,
+    details,
+    androidScheduleMode: AndroidScheduleMode.alarmClock,
+    uiLocalNotificationDateInterpretation:
+        UILocalNotificationDateInterpretation.absoluteTime,
+  );
+  print('✅ Notification scheduled! id: ${_taskNotificationId(taskId)}');
+} catch (e, st) {
+  print('❌ zonedSchedule error: $e');
+  print('❌ stackTrace: $st'); // ✅ เพิ่มบรรทัดนี้
+  logError(e, st);
+}
+
+    print('─────────────────────────────────');
   }
 
   static Future<void> cancelTaskReminder(String taskId) async {
     await initialize();
     await _plugin.cancel(_taskNotificationId(taskId));
+    print('🗑️ Notification cancelled: ${_taskNotificationId(taskId)}');
   }
 
   static ({int hour, int minute})? _parseTaskTime(
@@ -268,26 +303,27 @@ class NotificationService {
     required String localeTag,
   }) {
     final text = input.trim();
-    if (text.isEmpty) {
-      return null;
-    }
+    if (text.isEmpty) return null;
 
-    try {
-      final parsed = DateFormat.jm(localeTag).parseLoose(text);
-      return (hour: parsed.hour, minute: parsed.minute);
-    } catch (_) {
-      // Fallback below.
-    }
-
+    // ✅ 24hr ก่อน เพราะเราบันทึกแบบ "HH:mm"
     final military = RegExp(r'^(\d{1,2}):(\d{2})$').firstMatch(text);
     if (military != null) {
       final hour = int.tryParse(military.group(1)!);
       final minute = int.tryParse(military.group(2)!);
       if (hour != null && minute != null && hour <= 23 && minute <= 59) {
+        print('   parse (24hr): $hour:$minute');
         return (hour: hour, minute: minute);
       }
     }
 
+    // ✅ 12hr fallback
+    try {
+      final parsed = DateFormat.jm(localeTag).parseLoose(text);
+      print('   parse (jm): ${parsed.hour}:${parsed.minute}');
+      return (hour: parsed.hour, minute: parsed.minute);
+    } catch (_) {}
+
+    print('❌ parse failed for: "$text"');
     return null;
   }
 
@@ -302,5 +338,18 @@ class NotificationService {
   static void logError(Object error, StackTrace stackTrace) {
     AppLogger.error('Notification error', error: error);
     AppLogger.warn('$stackTrace');
+  }
+
+  // ✅ เพิ่มตรงนี้
+  static Future<void> _requestExactAlarmPermission() async {
+    try {
+      final status = await Permission.scheduleExactAlarm.status;
+      if (!status.isGranted) {
+        await Permission.scheduleExactAlarm.request();
+        print('🔔 Exact alarm permission requested');
+      }
+    } catch (e) {
+      print('⚠️ Could not request exact alarm permission: $e');
+    }
   }
 }

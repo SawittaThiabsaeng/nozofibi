@@ -2,39 +2,49 @@ name: nozofibi
 description: A study timer app with task management and session tracking.
 publish_to: 'none'
 
-version: 1.0.0+3
+version: 1.0.0+7
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
+  flutter:
+    sdk: flutter
+
+  flutter_localizations:
+    sdk: flutter
+
+  flutter_local_notifications: ^18.0.0
+  timezone: ^0.9.4
+  flutter_timezone: ^3.0.0
   app_settings: ^5.1.1
+
   cloud_firestore: ^6.3.0
   firebase_app_check: ^0.4.3
   firebase_auth: ^6.4.0
   firebase_core: ^4.7.0
   firebase_crashlytics: ^5.2.0
-  flutter:
-    sdk: flutter
+
   google_sign_in: ^6.2.1
-  flutter_local_notifications: ^17.2.4
+  sign_in_with_apple: ^7.0.1
+
+  permission_handler: ^11.3.0
+  edge_to_edge: ^0.0.2
   flutter_secure_storage: ^9.2.2
   flutter_svg: ^2.0.10
-  flutter_timezone: ^3.0.0
-  timezone: ^0.9.4
-  flutter_localizations:
-    sdk: flutter
   google_fonts: ^8.0.2
+
   hive: ^2.2.3
   hive_flutter: ^1.1.0
+  provider: ^6.0.0
+  shared_preferences: ^2.5.5
+
   image: ^4.8.0
   image_cropper: ^12.2.1
   image_picker: ^1.0.4
+
   intl: ^0.20.2
-  provider: ^6.0.0
-  shared_preferences: ^2.5.5
-  sign_in_with_apple: ^7.0.1
-  
+
 dev_dependencies:
   fake_cloud_firestore: ^4.1.0+1
   firebase_auth_mocks: ^0.15.1
@@ -48,9 +58,9 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/images/nozofibi_launcher.png"
+  image_path: assets/images/nozofibi_launcher.png
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/images/nozofibi_launcher.png"
+  adaptive_icon_foreground: assets/images/nozofibi_launcher.png
 
 flutter:
   uses-material-design: true

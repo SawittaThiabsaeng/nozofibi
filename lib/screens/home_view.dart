@@ -21,7 +21,8 @@ import '../widgets/soft_background.dart';
 
 import 'mood_log_screen.dart';
 
-class HomeView extends StatelessWidget {
+// ✅ เปลี่ยนเป็น StatefulWidget
+class HomeView extends StatefulWidget {
   const HomeView({
     required this.onOpenEmotionAnalytics,
     required this.userName,
@@ -32,18 +33,22 @@ class HomeView extends StatelessWidget {
   final VoidCallback onOpenEmotionAnalytics;
   final String userName;
   final XFile? profileImage;
-  static int _metricsCacheKey = 0;
-  static _HomeMetricsSnapshot? _metricsCache;
-  
-  // ⭐ Profile image cache to avoid re-decoding every frame
-  static Uint8List? _cachedProfileImage;
-  static DateTime? _lastProfileImageFetch;
-  
-  // ⭐ Checkin cache to avoid re-parsing JSON every frame
-  static List<EmotionCheckin>? _cachedCheckins;
-  static DateTime? _lastCheckinFetch;
 
-  static void invalidateProfileImageCache() {
+  @override
+  State<HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<HomeView> {
+  // ✅ ย้ายจาก static fields มาเป็น instance fields ของ State
+  int _metricsCacheKey = 0;
+  _HomeMetricsSnapshot? _metricsCache;
+  Uint8List? _cachedProfileImage;
+  DateTime? _lastProfileImageFetch;
+  List<EmotionCheckin>? _cachedCheckins;
+  DateTime? _lastCheckinFetch;
+
+  // ✅ ไม่ใช้ static แล้ว — เรียกผ่าน instance ได้เลย
+  void invalidateProfileImageCache() {
     _cachedProfileImage = null;
     _lastProfileImageFetch = null;
   }
@@ -116,7 +121,7 @@ class HomeView extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          userName,
+                          widget.userName, // ✅ เปลี่ยนเป็น widget.userName
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: isDark
@@ -292,7 +297,8 @@ class HomeView extends StatelessWidget {
             );
           }
 
-          if (profileImage == null) {
+          // ✅ เปลี่ยนเป็น widget.profileImage
+          if (widget.profileImage == null) {
             return Container(
               color: Colors.transparent,
               alignment: Alignment.center,
@@ -303,20 +309,19 @@ class HomeView extends StatelessWidget {
 
           if (kIsWeb) {
             return Image.network(
-              profileImage!.path,
+              widget.profileImage!.path,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 40),
             );
           }
 
           return Image.file(
-            File(profileImage!.path),
+            File(widget.profileImage!.path),
             fit: BoxFit.cover,
           );
         },
       );
-  
-  // ⭐ Cache profile image per minute to avoid constant re-decoding
+
   Future<Uint8List?> _getCachedProfileImage() async {
     final now = DateTime.now();
     if (_cachedProfileImage != null && _lastProfileImageFetch != null) {
@@ -324,7 +329,7 @@ class HomeView extends StatelessWidget {
         return _cachedProfileImage;
       }
     }
-    
+
     final image = await ProfileStorage.loadProfileImage();
     _cachedProfileImage = image;
     _lastProfileImageFetch = now;
@@ -376,7 +381,7 @@ class HomeView extends StatelessWidget {
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: onOpenEmotionAnalytics,
+                    onTap: widget.onOpenEmotionAnalytics, // ✅ widget.
                     child: Container(
                       padding: const EdgeInsets.fromLTRB(24, 20, 24, 22),
                       decoration: const BoxDecoration(
@@ -591,7 +596,7 @@ class HomeView extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: ElevatedButton.icon(
-                                  onPressed: onOpenEmotionAnalytics,
+                                  onPressed: widget.onOpenEmotionAnalytics, // ✅ widget.
                                   icon: const Icon(Icons.casino_outlined),
                                   label: Text(
                                     isThai ? 'สุ่มอารมณ์ตอนนี้' : 'Check Mood Now',
@@ -783,7 +788,8 @@ class HomeView extends StatelessWidget {
     var hash = dayKey;
 
     for (final t in tasks) {
-      final taskDay = (t.date.year * 10000) + (t.date.month * 100) + t.date.day;
+      final taskDay =
+          (t.date.year * 10000) + (t.date.month * 100) + t.date.day;
       hash = Object.hash(hash, t.id, taskDay, t.completed, t.focusMinutes);
     }
 
@@ -1101,8 +1107,7 @@ class HomeView extends StatelessWidget {
     final s = totalSeconds % 60;
     return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
-  
-  // ⭐ Cache checkin list per 30 seconds to avoid constant JSON parsing
+
   Future<List<EmotionCheckin>> _getCachedCheckins() async {
     final now = DateTime.now();
     if (_cachedCheckins != null && _lastCheckinFetch != null) {
@@ -1110,7 +1115,7 @@ class HomeView extends StatelessWidget {
         return _cachedCheckins!;
       }
     }
-    
+
     final checkins = await EmotionCheckinStorage.loadCheckins();
     _cachedCheckins = checkins;
     _lastCheckinFetch = now;

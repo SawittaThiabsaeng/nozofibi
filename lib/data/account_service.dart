@@ -38,6 +38,14 @@ class ConsentRecord {
 /// - Consent submission and history
 /// - Direct Firebase Auth/Firestore operations (Spark-friendly)
 class AccountService {
+    /// Check if user has accepted consent (required) by uid.
+    static Future<bool> hasConsent(String uid) async {
+      print("Checking consent for $uid");
+      final doc = await _firestore.collection('users').doc(uid).get();
+      final result = doc.exists && (doc.data()?['requiredConsentAccepted'] == true);
+      print("Firestore consent = $result");
+      return result;
+    }
   static FirebaseAuth _auth = FirebaseAuth.instance;
   static FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static Future<bool> Function()? _reauthOverride;
@@ -88,22 +96,22 @@ class AccountService {
 
   /// Submit user consent to Firestore for compliance.
   static Future<bool> submitConsent({
+    required String uid,
     required bool accepted,
-    String? customVersion,
     bool marketingOptIn = false,
-  }) async {
+    String? customVersion,
+  }) async 
+  {
+    
     try {
-      final user = _auth.currentUser;
-      if (user == null) {
-        throw Exception('User not authenticated');
-      }
 
       final version = customVersion ?? currentConsentVersion;
       final timestamp = FieldValue.serverTimestamp();
 
+
       await _firestore
           .collection('users')
-          .doc(user.uid)
+          .doc(uid)
           .collection('consent')
           .add({
         'version': version,
@@ -114,7 +122,7 @@ class AccountService {
         'source': 'client',
       });
 
-      await _firestore.collection('users').doc(user.uid).set({
+      await _firestore.collection('users').doc(uid).set({
         'consentVersion': version,
         'consented': accepted,
         'requiredConsentAccepted': accepted,
@@ -180,6 +188,9 @@ class AccountService {
       await _deleteUserData(userId: userId, reason: reason);
       await _deleteAuthUser(user);
       await _auth.signOut();
+      await GoogleSignIn().signOut();
+
+      // Clear provider/state here if needed (should be called from UI after await)
 
       AppLogger.info('Account deleted successfully');
       return true;

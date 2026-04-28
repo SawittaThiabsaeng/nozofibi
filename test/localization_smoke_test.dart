@@ -88,9 +88,10 @@ void main() {
         locale: const Locale('th'),
         child: ScheduleView(
           tasks: const [],
-          onAddTask: (_) {},
+          onAddTask: (_, {required alertTitle, required localeTag}) async {},
           onToggle: (_) {},
           onDelete: (_) {},
+          onUpdateTask: (_, {required alertTitle, required localeTag}) async {},
         ),
       ),
     );

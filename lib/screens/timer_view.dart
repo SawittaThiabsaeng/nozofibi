@@ -294,7 +294,7 @@ class _TimerViewState extends State<TimerView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+       backgroundColor: Colors.transparent,
 
       /// ✅ AppBar แสดงเฉพาะตอนมาจาก Schedule
       appBar: widget.fromSchedule
@@ -348,19 +348,25 @@ class _TimerViewState extends State<TimerView> {
 
           /// 📌 เนื้อหาหลัก
           SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) => SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
-                ),
-                padding: const EdgeInsets.fromLTRB(0, 24, 0, 160),
-                child: ConstrainedBox(
-                  constraints:
-                      BoxConstraints(minHeight: constraints.maxHeight - 184),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
+  child: LayoutBuilder(
+    builder: (context, constraints) {
+      return SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(
+          0,
+          24,
+          0,
+          MediaQuery.of(context).padding.bottom + 100,
+        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: constraints.maxHeight,
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
                         Text(
                           s.focusTimer,
                           style: TextStyle(
@@ -452,7 +458,7 @@ class _TimerViewState extends State<TimerView> {
                               _sideActionButton(
                                 icon: Icons.save,
                                 onPressed: saveTimer,
-                              ),
+                             ),
                             ],
                           ),
                         ),
@@ -460,13 +466,14 @@ class _TimerViewState extends State<TimerView> {
                     ),
                   ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _timeButton(int minutes) => _durationButton(
         label: '$minutes',

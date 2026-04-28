@@ -52,7 +52,12 @@ class _RollerDurationPickerState extends State<RollerDurationPicker> {
 
     return SingleChildScrollView(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        padding: EdgeInsets.fromLTRB(
+  16,
+  24,
+  16,
+  MediaQuery.of(context).padding.bottom + 24,
+  ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

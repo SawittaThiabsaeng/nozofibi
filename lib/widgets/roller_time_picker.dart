@@ -46,7 +46,12 @@ class _RollerTimePickerState extends State<RollerTimePicker> {
 
     return SingleChildScrollView(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        padding: EdgeInsets.fromLTRB(
+  16,
+  24,
+  16,
+  MediaQuery.of(context).padding.bottom + 24, // ✅ เพิ่ม safe area bottom
+),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -253,11 +258,18 @@ Future<TimeOfDay?> showRollerTimePicker({
     showModalBottomSheet<TimeOfDay>(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      builder: (context) => RollerTimePicker(
-        initialTime: initialTime,
-        onTimeSelected: (_) {}, // Updates happen in real-time via callback
-      ),
+      isScrollControlled: true,  // ✅ เพิ่ม
+      useSafeArea: true,          // ✅ เพิ่ม — ป้องกันโดน navigation bar บัง
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom, // ✅ เพิ่ม
+        ),
+        child: RollerTimePicker(
+          initialTime: initialTime,
+          onTimeSelected: (_) {},
+        ),
       ),
     );

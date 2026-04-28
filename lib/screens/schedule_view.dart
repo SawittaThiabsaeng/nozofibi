@@ -15,25 +15,38 @@ class ScheduleView extends StatefulWidget {
     required this.onAddTask,
     required this.onToggle,
     required this.onDelete,
+    required this.onUpdateTask,
     super.key,
     this.onSessionSaved,
   });
 
   final List<ScheduleTask> tasks;
-  final Function(ScheduleTask) onAddTask;
+  final Future<void> Function(
+  ScheduleTask task, {
+  required String alertTitle,
+  required String localeTag,
+}) onAddTask;
   final Function(String) onToggle;
   final Function(String) onDelete;
+  final Future<void> Function(
+    ScheduleTask updated, {
+    required String alertTitle,
+    required String localeTag,
+  }) onUpdateTask;
   final VoidCallback? onSessionSaved;
 
   @override
   State<ScheduleView> createState() => _ScheduleViewState();
 }
 
-class _ScheduleViewState extends State<ScheduleView> {
+class _ScheduleViewState extends State<ScheduleView> with AutomaticKeepAliveClientMixin {
+    @override
+    bool get wantKeepAlive => true;
   DateTime selectedDate = DateTime.now();
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final s = AppStrings.of(context);
     final localeTag = Localizations.localeOf(context).toLanguageTag();
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -260,13 +273,21 @@ class _ScheduleViewState extends State<ScheduleView> {
                         ),
                         const SizedBox(width: 6),
                         IconButton(
-                          onPressed: () => widget.onDelete(t.id),
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            size: 20,
-                            color: Colors.redAccent,
-                          ),
-                        ),
+  onPressed: () => _editTaskDialog(t), // ✅ เพิ่ม
+  icon: const Icon(
+    Icons.edit_outlined,
+    size: 20,
+    color: Colors.blueAccent,
+  ),
+),
+IconButton(
+  onPressed: () => widget.onDelete(t.id),
+  icon: const Icon(
+    Icons.delete_outline,
+    size: 20,
+    color: Colors.redAccent,
+  ),
+),
                       ],
                     ),
                   ),
@@ -278,6 +299,169 @@ class _ScheduleViewState extends State<ScheduleView> {
     );
   }
 
+
+    Future<void> _editTaskDialog(ScheduleTask task) async {
+    final controller = TextEditingController(text: task.title);
+    var selectedType = task.type;
+    var selectedTime = TimeOfDay(
+      hour: int.tryParse(task.time.split(':')[0]) ?? 8,
+      minute: int.tryParse(task.time.split(':')[1]) ?? 0,
+    );
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              24, 32, 24,
+              MediaQuery.of(context).viewInsets.bottom +
+              MediaQuery.of(context).padding.bottom + 24,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  AppStrings.of(context).editPlan,
+                  style: isDark
+                      ? AppTheme.h2.copyWith(color: Colors.white)
+                      : AppTheme.h2,
+                ),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: controller,
+                  style: const TextStyle(color: Color(0xFF111827)),
+                  decoration: InputDecoration(
+                    hintText: AppStrings.of(context).whatPlanning,
+                    hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final type in const [
+                      TaskType.breakTime,
+                      TaskType.study,
+                      TaskType.exercise,
+                      TaskType.rest,
+                    ])
+                      ChoiceChip(
+                        avatar: Icon(_icon(type), size: 16,
+                            color: selectedType == type ? Colors.white : AppTheme.primary),
+                        label: Text(_taskTypeLabel(type, AppStrings.of(context))),
+                        selected: selectedType == type,
+                        onSelected: (_) => setModalState(() => selectedType = type),
+                        selectedColor: AppTheme.primary,
+                        labelStyle: TextStyle(
+                          color: selectedType == type ? Colors.white : null,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: () async {
+                    final picked = await showRollerTimePicker(
+                      context: context,
+                      initialTime: selectedTime,
+                    );
+                    if (picked != null) setModalState(() => selectedTime = picked);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.schedule_rounded),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(AppStrings.of(context).setTime, style: AppTheme.caption),
+                              const SizedBox(height: 2),
+                              Text(
+                                selectedTime.format(context),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF111827),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(AppStrings.of(context).tapToChangeTime,
+                            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final title = controller.text.trim();
+                      if (title.isEmpty) return;
+
+                      final updated = task.copyWith(
+                        title: title,
+                        type: selectedType,
+                        time:
+                          '${selectedTime.hour.toString().padLeft(2, '0')}:'
+                          '${selectedTime.minute.toString().padLeft(2, '0')}',
+                      );
+
+                      await widget.onUpdateTask(
+                        updated,
+                        alertTitle: AppStrings.of(context).dailyReminderTitle,
+                        localeTag: Localizations.localeOf(context).toLanguageTag(),
+                      );
+
+                      if (!mounted) return;
+                      Navigator.pop(context, true);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: Text(
+                      AppStrings.of(context).savePlan,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (!mounted || saved != true) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppStrings.of(context).planSaved)),
+    );
+  }
   Future<void> _addTaskDialog() async {
     await _addTaskDialogForDate(selectedDate);
   }
@@ -289,8 +473,9 @@ class _ScheduleViewState extends State<ScheduleView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final saved = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => SingleChildScrollView(
           child: Padding(
@@ -298,7 +483,9 @@ class _ScheduleViewState extends State<ScheduleView> {
               24,
               32,
               24,
-              MediaQuery.of(context).viewInsets.bottom + 48,
+              MediaQuery.of(context).viewInsets.bottom +
+              MediaQuery.of(context).padding.bottom +
+              24
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -448,21 +635,27 @@ class _ScheduleViewState extends State<ScheduleView> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      final title = controller.text.trim();
-                      if (title.isEmpty) {
-                        return;
-                      }
+                    onPressed: () async {
+  final title = controller.text.trim();
 
-                      widget.onAddTask(
-                        ScheduleTask(
-                          id: DateTime.now().toString(),
-                          date: date,
-                          time: selectedTime.format(context),
-                          title: title,
-                          type: selectedType,
-                        ),
-                      );
+  if (title.isEmpty) return;
+
+  await widget.onAddTask(
+  ScheduleTask(
+    id: DateTime.now().toString(),
+    date: date,
+    time:
+        '${selectedTime.hour.toString().padLeft(2, '0')}:'
+        '${selectedTime.minute.toString().padLeft(2, '0')}',
+    title: title,
+    type: selectedType,
+  ),
+  alertTitle: AppStrings.of(context).dailyReminderTitle,
+  localeTag: Localizations.localeOf(context).toLanguageTag(), // ✅ เพิ่ม
+);
+
+  if (!mounted) return;
+
                       Navigator.pop(context, true);
                     },
                     style: ElevatedButton.styleFrom(

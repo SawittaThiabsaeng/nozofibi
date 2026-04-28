@@ -223,6 +223,7 @@ class _ProfileViewState extends State<ProfileView> {
                     Colors.redAccent,
                     isLast: true,
                     tap: widget.onLogout,
+                    key: const Key('signOutListTile'),
                   ),
                 ],
               ),
@@ -333,8 +334,10 @@ class _ProfileViewState extends State<ProfileView> {
     Color textColor, {
     bool isLast = false,
     VoidCallback? tap,
+    Key? key,
   }) =>
       ListTile(
+        key: key,
         onTap: tap,
         leading: Container(
           padding: const EdgeInsets.all(8),

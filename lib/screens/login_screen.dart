@@ -22,9 +22,11 @@ class LoginScreen extends StatefulWidget {
     this.emailLoginOverride,
     this.onConsentAccepted,
   })  : auth = auth ?? FirebaseAuth.instance,
-        googleSignIn = googleSignIn ?? GoogleSignIn();
+        googleSignIn = googleSignIn ?? GoogleSignIn(
+          serverClientId: '170288600357-p31o9o6orqp2pl3fu9ob5sr2asnuni4h.apps.googleusercontent.com',
+        );
 
-  final void Function(String name)? onLogin;
+  final void Function(User? user)? onLogin;
   final FirebaseAuth auth;
   final GoogleSignIn googleSignIn;
   final Future<bool> Function(BuildContext context)? consentPrompt;
@@ -60,9 +62,6 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // debug ชั่วคราว ลบทีหลัง
-      // debug ชั่วคราว ลบทีหลัง
-    // Cleanup session on login screen entry (user logged out)
     _cleanupSession();
   }
 
@@ -70,6 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await widget.auth.signOut();
       await widget.googleSignIn.signOut();
+      await PrivacyStorage.clearConsentOnly(); // ✅ Clear consent on logout
     } catch (e) {
       AppLogger.warn('Session cleanup on login screen failed');
     }
@@ -225,7 +225,7 @@ class _LoginScreenState extends State<LoginScreen> {
             : (user?.email?.split('@').first ?? 'User');
 
         _resetLoginProtection();
-        widget.onLogin?.call(name);
+        widget.onLogin?.call(user);
       } else {
         if (!_acceptedPolicy) {
           _showErrorSnackBar(AppStrings.of(context).acceptPolicyFirst);
@@ -241,7 +241,7 @@ class _LoginScreenState extends State<LoginScreen> {
         await credential.user?.updateDisplayName(name);
         await PrivacyStorage.saveConsentAcceptedNow();
         await NotificationService.requestPermissionIfNeeded();
-        widget.onLogin?.call(name.isNotEmpty ? name : email.split('@').first);
+        widget.onLogin?.call(credential.user);
       }
     } on FirebaseAuthException catch (e) {
       final message = _isLogin
@@ -259,6 +259,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _showErrorSnackBar(message);
     } catch (e) {
       AppLogger.error('Unexpected sign-in error', error: e);
+      if (!mounted) return;
       if (kDebugMode) {
         _showErrorSnackBar('Debug: $e');
       } else {
@@ -276,38 +277,38 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _showPolicyDialog({
-    required BuildContext dialogContext,
-    required String title,
-    required String body,
-  }) {
-    showDialog<void>(
-      context: dialogContext,
-      useRootNavigator: true,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        titleTextStyle: const TextStyle(
-          color: Color(0xFF111827),
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-        ),
-        contentTextStyle: const TextStyle(
-          color: Color(0xFF111827),
-          fontSize: 14,
-          height: 1.45,
-        ),
-        title: Text(title),
-        content: SingleChildScrollView(child: SelectableText(body)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppStrings.of(context).close),
-          ),
-        ],
+void _showPolicyDialog({
+  required BuildContext dialogContext,
+  required String title,
+  required String body,
+}) {
+  showDialog<void>(
+    context: dialogContext,
+    useRootNavigator: true,
+    builder: (context) => AlertDialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
+      titleTextStyle: const TextStyle(
+        color: Color(0xFF111827),
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
       ),
-    );
-  }
+      contentTextStyle: const TextStyle(
+        color: Color(0xFF111827),
+        fontSize: 14,
+        height: 1.45,
+      ),
+      title: Text(title),
+      content: SingleChildScrollView(child: SelectableText(body)),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(AppStrings.of(dialogContext).close),
+        ),
+      ],
+    ),
+  );
+}
 
   String _resolveLoginErrorMessage(FirebaseAuthException error) {
     if (_isCredentialMismatchCode(error.code)) {
@@ -574,10 +575,7 @@ class _LoginScreenState extends State<LoginScreen> {
           return;
         }
         final user = userCredential.user;
-        final name = user?.displayName?.trim().isNotEmpty == true
-            ? user!.displayName!
-            : (user?.email?.split('@').first ?? 'User');
-        widget.onLogin?.call(name);
+        widget.onLogin?.call(user);
         return;
       }
 
@@ -602,7 +600,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ? user!.displayName!
           : (user?.email?.split('@').first ??
               googleUser.email.split('@').first);
-      widget.onLogin?.call(name);
+      widget.onLogin?.call(user);
     } on FirebaseAuthException catch (e) {
       _showErrorSnackBar(
         _friendlyAuthMessage(

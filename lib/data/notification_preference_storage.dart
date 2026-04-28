@@ -11,7 +11,7 @@ class NotificationPreferenceStorage {
   static bool _isMissingBoxError(Object error) =>
       error is HiveError && error.toString().contains('Box not found');
 
-  static bool getEnabled({bool fallback = true}) {
+  static bool getEnabled({bool fallback = false}) {
     try {
       final box = Hive.box<String>(AppLocalDb.privacyBox);
       final raw = box.get(_enabledKey);

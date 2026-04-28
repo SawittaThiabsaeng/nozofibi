@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nozofibi/main.dart';
 import 'package:nozofibi/providers/study_session_provider.dart';
 import 'package:nozofibi/providers/task_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:nozofibi/screens/main_navigation.dart';
 
 class _FakeTaskProvider extends TaskProvider {
   @override
@@ -17,22 +17,25 @@ class _FakeStudySessionProvider extends StudySessionProvider {
 
 Widget _buildTestApp({
   required Future<void> Function() onSignOut,
-}) => MultiProvider(
-    providers: [
-      ChangeNotifierProvider<TaskProvider>(create: (_) => _FakeTaskProvider()),
-      ChangeNotifierProvider<StudySessionProvider>(
-        create: (_) => _FakeStudySessionProvider(),
+}) =>
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider<TaskProvider>(
+          create: (_) => _FakeTaskProvider(),
+        ),
+        ChangeNotifierProvider<StudySessionProvider>(
+          create: (_) => _FakeStudySessionProvider(),
+        ),
+      ],
+      child: MaterialApp(
+        home: MainNavigation(
+          userName: 'Tester',
+          onToggleDarkMode: (_) {},
+          onLanguageChanged: (_) {},
+          onSignOut: onSignOut,
+        ),
       ),
-    ],
-    child: MaterialApp(
-      home: MainNavigation(
-        userName: 'Tester',
-        onToggleDarkMode: (_) {},
-        onLanguageChanged: (_) {},
-        onSignOut: onSignOut,
-      ),
-    ),
-  );
+    );
 
 void main() {
   testWidgets('Cancel does not sign out', (tester) async {
@@ -47,22 +50,17 @@ void main() {
     );
 
     await tester.tap(find.byIcon(Icons.person_rounded));
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(
-      find.widgetWithText(ListTile, 'Sign Out'),
-      220,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pump(const Duration(milliseconds: 200));
 
-    await tester.tap(find.widgetWithText(ListTile, 'Sign Out'));
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.ensureVisible(find.byKey(const Key('signOutListTile')));
+    await tester.tap(find.byKey(const Key('signOutListTile')));
+    await tester.pumpAndSettle();
 
     expect(find.byType(AlertDialog), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byKey(const Key('cancelSignOutButton')));
+    await tester.pumpAndSettle();
 
     expect(signOutCalls, 0);
     expect(find.byType(AlertDialog), findsNothing);
@@ -80,22 +78,17 @@ void main() {
     );
 
     await tester.tap(find.byIcon(Icons.person_rounded));
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(
-      find.widgetWithText(ListTile, 'Sign Out'),
-      220,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pump(const Duration(milliseconds: 200));
 
-    await tester.tap(find.widgetWithText(ListTile, 'Sign Out'));
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.ensureVisible(find.byKey(const Key('signOutListTile')));
+    await tester.tap(find.byKey(const Key('signOutListTile')));
+    await tester.pumpAndSettle();
 
     expect(find.byType(AlertDialog), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(TextButton, 'Sign Out'));
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byKey(const Key('confirmSignOutButton')));
+    await tester.pumpAndSettle();
 
     expect(signOutCalls, 1);
     expect(find.byType(AlertDialog), findsNothing);
